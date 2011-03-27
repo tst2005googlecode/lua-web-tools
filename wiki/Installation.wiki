@@ -131,7 +131,7 @@ AddHandler lwt .lua
 </IfModule>
 }}}
 
-Then activate this configuration:
+Then activate the module and restart the Apache HTTP Server:
 
 {{{
 $ sudo a2enmod lwt
