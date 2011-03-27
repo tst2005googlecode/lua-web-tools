@@ -89,11 +89,11 @@ cd ..
 
 = Installation of the `cache` module (optional) =
 
-The cache module provides an API to access memcached from Lua.
+The `cache` module provides an API to access memcached from Lua.
 
 == Prerequisites ==
 
-memcached library and headers
+memcached headers:
 
   * libmemcached-dev
 
