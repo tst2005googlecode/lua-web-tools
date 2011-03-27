@@ -14,7 +14,7 @@ Apache HTTPD developement headers
 Lua interpreter and header files:
 
   * lua5.1
-  * liblua5.1-0-dev
+  * liblua5.1-dev
 
 To install these prerequisites:
 
