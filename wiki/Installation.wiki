@@ -7,7 +7,7 @@ This page describes the installation of LWT on an Ubuntu Linux system. You may h
 
 == Prerequisites ==
 
-Apache HTTPD developement headers
+Apache HTTP Server developement headers:
 
   * apache2-dev
 
