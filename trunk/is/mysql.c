@@ -158,6 +158,7 @@ static int execute (lua_State *L) {
 	const char *sql;
 	unsigned long param_count;
 	int i;
+	size_t len;
 
 	m = (mysql_rec *) luaL_checkudata(L, 1, IS_MYSQL_METATABLE);
 	if (!m->mysql) {
@@ -218,7 +219,8 @@ static int execute (lua_State *L) {
 		case LUA_TSTRING:
 			m->bind[i].buffer_type = MYSQL_TYPE_STRING;
 			m->bind[i].buffer = (void *) lua_tolstring(L, i + 3,
-					&m->bind[i].buffer_length);
+					&len);
+			m->bind[i].buffer_length = len;
 			m->bind[i].length = &m->bind[i].buffer_length;
 			break;
 
