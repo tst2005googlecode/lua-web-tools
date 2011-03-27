@@ -1,0 +1,153 @@
+#summary Explains how to compile and install LWT.
+
+This page describes the installation of LWT on an Ubuntu Linux system. You may have to modify the makefiles in order to compile and install LWT on other systems.
+
+= Installation of mod_lwt =
+
+== Prerequisites ==
+
+Apache HTTPD developement headers
+
+  * apache2-dev
+
+Lua interpreter and header files:
+
+  * lua5.1
+  * liblua5.1-0-dev
+
+To install these dependencies:
+
+{{{
+$ sudo apt-get install apache2-dev lua5.1 liblua5.1-0-dev 
+}}}
+
+to install the prerequisites.
+
+== Building and Installing ==
+
+=== Checkout ===
+
+{{{
+svn checkout http://lua-web-tools.googlecode.com/svn/trunk lwt
+}}}
+
+=== Compile ===
+
+{{{
+cd mod_lwt
+make
+}}}
+
+=== Install ===
+
+{{{
+sudo make install
+cd ..
+}}}
+
+= Installation of the `is` module (optional) =
+
+The `is` package provides an API to access information systems from Lua.
+
+== Prerequisites ==
+
+MySQL library and headers
+
+  * mysql-dev
+
+SQLite library and headers
+
+  * sqlite3-dev
+
+FreeTDS library and headers
+
+  * freetds-dev
+
+To install these dependencies:
+
+{{{
+$ sudo apt-get install mysql-dev sqlite3-dev freetds-dev
+}}}
+
+== Building and Installing ==
+
+=== Compile ===
+
+{{{
+cd is
+make
+}}}
+
+=== Install ===
+
+{{{
+sudo make install
+cd ..
+}}}
+
+= Installation of the `cache` module =
+
+The cache package provides an API to access memcached from Lua.
+
+== Prerequisites ==
+
+Memcached library and headers
+
+  * libmemcached-dev
+
+To install this dependency:
+
+{{{
+$ sudo apt-get install libmemcached-dev 
+}}}
+
+== Building and Installing ==
+
+=== Compile ===
+
+{{{
+cd cache
+make
+}}}
+
+=== Install ===
+
+{{{
+sudo make install
+cd ..
+}}}
+
+= Test =
+
+To install mod_lwt globally, create `/etc/apache2/mods-available/lwt.conf` with the following content:
+
+{{{
+<IfModule mod_lwt.c>
+AddHandler lwt .lua
+</IfModule>
+}}}
+
+Then activate this configuration:
+
+{{{
+$ sudo a2enmod lwt
+$ sudo service apache2 restart
+}}}
+
+Now the Apache HTTPD server will pass `.lua` files globally to mod_lwt.
+
+Create a basic test page in /var/www/test.lua:
+
+{{{
+request, args = ...
+
+local request_fields = { "protocol", "hostname", "path", "path_info", "method", "filename", "filedir", "user", "auth_type", "local_ip", "remote_ip" }
+
+httpd.set_content_type("text/plain")
+httpd.write("Hello Lua World\n")
+for _, key in ipairs(requestfields) do
+        httpd.write(key .." -> " .. request[key] or "(not set)" .. "\r\n")
+end
+}}}
+
+Test the installation by pointing your browser to `http://<host>/test.lua.`
