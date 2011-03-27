@@ -1,7 +1,7 @@
 #summary Explains how to compile and install LWT.
 #labels Featured,Phase-Deploy
 
-This page describes the installation of LWT on an Ubuntu Linux system. You may have to modify the makefiles in order to compile and install LWT on other systems.
+This page describes the installation of LWT on an Ubuntu Linux system. You may have to modify these instructions and the makefiles in order to compile and install LWT on other systems.
 
 = Installation of mod_lwt =
 
@@ -19,7 +19,7 @@ Lua interpreter and header files:
 To install these prerequisites:
 
 {{{
-$ sudo apt-get install apache2-dev lua5.1 liblua5.1-0-dev 
+$ sudo apt-get install apache2-dev lua5.1 liblua5.1-dev 
 }}}
 
 == Building and Installing ==
@@ -28,6 +28,7 @@ $ sudo apt-get install apache2-dev lua5.1 liblua5.1-0-dev
 
 {{{
 svn checkout http://lua-web-tools.googlecode.com/svn/trunk lwt
+cd lwt
 }}}
 
 === Compile ===
@@ -46,26 +47,26 @@ cd ..
 
 = Installation of the `is` module (optional) =
 
-The `is` package provides an API to access information systems from Lua.
+The `is` module provides an API to access information systems from Lua.
 
 == Prerequisites ==
 
-MySQL library and headers
+MySQL client headers:
 
-  * mysql-dev
+  * libmysqlclient-dev
 
-SQLite library and headers
+SQLite3 headers:
 
-  * sqlite3-dev
+  * libsqlite3-dev
 
-FreeTDS library and headers
+FreeTDS headers:
 
   * freetds-dev
 
 To install these dependencies:
 
 {{{
-$ sudo apt-get install mysql-dev sqlite3-dev freetds-dev
+$ sudo apt-get install libmysqlclient-dev libsqlite3-dev freetds-dev
 }}}
 
 == Building and Installing ==
@@ -79,6 +80,8 @@ make
 
 === Install ===
 
+The makefile installs the `is` module in `/usr/local/lib/lua/5.1`.
+
 {{{
 sudo make install
 cd ..
@@ -86,7 +89,7 @@ cd ..
 
 = Installation of the `cache` module (optional) =
 
-The cache package provides an API to access memcached from Lua.
+The cache module provides an API to access memcached from Lua.
 
 == Prerequisites ==
 
@@ -111,6 +114,8 @@ make
 
 === Install ===
 
+The makefile installs the `cache` module in `/usr/local/lib/lua/5.1`.
+
 {{{
 sudo make install
 cd ..
@@ -133,7 +138,7 @@ $ sudo a2enmod lwt
 $ sudo service apache2 restart
 }}}
 
-Now the Apache HTTPD server will pass `.lua` files globally to mod_lwt.
+Now the Apache HTTP Server will pass `.lua` files globally to `mod_lwt`. Of course, like any module, `mod_lwt` can also be enabled on a site-by-site basis.
 
 Create a basic test page in `/var/www/test.lua`:
 
@@ -148,7 +153,7 @@ local request_fields = { "protocol", "hostname", "path", "path_info",
 httpd.set_content_type("text/plain")
 httpd.write("Hello Lua World\r\n")
 for _, key in ipairs(request_fields) do
-        httpd.write(key .." -> " .. request[key] or "(not set)" .. "\r\n")
+        httpd.write(key .." -> " .. (request[key] or "(not set)") .. "\r\n")
 end
 }}}
 
