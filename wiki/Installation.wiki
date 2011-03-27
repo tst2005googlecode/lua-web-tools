@@ -16,13 +16,11 @@ Lua interpreter and header files:
   * lua5.1
   * liblua5.1-0-dev
 
-To install these dependencies:
+To install these prerequisites:
 
 {{{
 $ sudo apt-get install apache2-dev lua5.1 liblua5.1-0-dev 
 }}}
-
-to install the prerequisites.
 
 == Building and Installing ==
 
@@ -86,13 +84,13 @@ sudo make install
 cd ..
 }}}
 
-= Installation of the `cache` module =
+= Installation of the `cache` module (optional) =
 
 The cache package provides an API to access memcached from Lua.
 
 == Prerequisites ==
 
-Memcached library and headers
+memcached library and headers
 
   * libmemcached-dev
 
@@ -137,16 +135,19 @@ $ sudo service apache2 restart
 
 Now the Apache HTTPD server will pass `.lua` files globally to mod_lwt.
 
-Create a basic test page in /var/www/test.lua:
+Create a basic test page in `/var/www/test.lua`:
 
 {{{
 request, args = ...
 
-local request_fields = { "protocol", "hostname", "path", "path_info", "method", "filename", "filedir", "user", "auth_type", "local_ip", "remote_ip" }
+local request_fields = { "protocol", "hostname", "path", "path_info",
+        "method", "filename", "filedir", "user", "auth_type",
+        "local_ip", "remote_ip"
+}
 
 httpd.set_content_type("text/plain")
-httpd.write("Hello Lua World\n")
-for _, key in ipairs(requestfields) do
+httpd.write("Hello Lua World\r\n")
+for _, key in ipairs(request_fields) do
         httpd.write(key .." -> " .. request[key] or "(not set)" .. "\r\n")
 end
 }}}
