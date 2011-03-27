@@ -3,7 +3,7 @@
 
 This page describes the installation of LWT on an Ubuntu Linux system. You may have to modify these instructions and the makefiles in order to compile and install LWT on other systems.
 
-= Installation of mod_lwt =
+= Installation of `mod_lwt` =
 
 == Prerequisites ==
 
@@ -123,7 +123,7 @@ cd ..
 
 = Test =
 
-To install mod_lwt globally, create `/etc/apache2/mods-available/lwt.conf` with the following content:
+To install `mod_lwt` globally, create `/etc/apache2/mods-available/lwt.conf` with the following content:
 
 {{{
 <IfModule mod_lwt.c>
