@@ -3,7 +3,7 @@
 
 This page describes the installation of LWT on an Ubuntu Linux system. You may have to modify these instructions and the makefiles in order to compile and install LWT on other systems.
 
-= Installation of `mod_lwt` =
+= Installation of mod_lwt =
 
 == Prerequisites ==
 
@@ -39,6 +39,8 @@ make
 }}}
 
 === Install ===
+
+The makefile installs the module in a location determined by the Apache HTTP Server `apxs` tool. The `httpd.lua` file is installed in `/usr/local/share/lua/5.1`.
 
 {{{
 sudo make install
@@ -80,7 +82,7 @@ make
 
 === Install ===
 
-The makefile installs the `is` module in `/usr/local/lib/lua/5.1`.
+The makefile installs the `is` module in `/usr/local/lib/lua/5.1` and `/usr/local/share/lua/5.1`.
 
 {{{
 sudo make install
@@ -114,7 +116,7 @@ make
 
 === Install ===
 
-The makefile installs the `cache` module in `/usr/local/lib/lua/5.1`.
+The makefile installs the `cache` module in `/usr/local/lib/lua/5.1` and `/usr/local/share/lua/5.1`.
 
 {{{
 sudo make install
@@ -131,6 +133,8 @@ AddHandler lwt .lua
 </IfModule>
 }}}
 
+(You can also copy the supplied `lwt.conf` from the `mod_lwt/etc` directory.)
+
 Then activate the module and restart the Apache HTTP Server:
 
 {{{
@@ -138,19 +142,20 @@ $ sudo a2enmod lwt
 $ sudo service apache2 restart
 }}}
 
-Now the Apache HTTP Server will pass `.lua` files globally to `mod_lwt`. Of course, like any module, `mod_lwt` can also be enabled on a site-by-site basis.
+Now the Apache HTTP Server will pass `.lua` files globally to mod_lwt. Of course, like any module, mod_lwt can also be enabled on a virtual host basis.
 
 Create a basic test page in `/var/www/test.lua`:
 
 {{{
+require "httpd"
+
+local request_fields = { "protocol", "hostname", "path", "path_info", "args",
+                "method", "filename", "filedir", "user", "auth_type",
+                "local_ip", "remote_ip" }
+
 request, args = ...
 
-local request_fields = { "protocol", "hostname", "path", "path_info",
-        "method", "filename", "filedir", "user", "auth_type",
-        "local_ip", "remote_ip"
-}
-
-httpd.set_content_type("text/plain")
+httpd.set_content_type("text/plain; charset=utf8")
 httpd.write("Hello Lua World\r\n")
 for _, key in ipairs(request_fields) do
         httpd.write(key .." -> " .. (request[key] or "(not set)") .. "\r\n")
