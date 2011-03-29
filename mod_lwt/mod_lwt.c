@@ -85,8 +85,8 @@ static const char *set_luacpath (cmd_parms *cmd, void *conf, const char *arg) {
  * LWT configuration directives.
  */
 static const command_rec commands[] = {
-	AP_INIT_TAKE1("LuaPath", set_luapath, NULL, OR_ALL, "Lua Path"),
-	AP_INIT_TAKE1("LuaCPath", set_luacpath, NULL, OR_ALL, "Lua C Path"),
+	AP_INIT_TAKE1("LuaPath", set_luapath, NULL, OR_OPTIONS, "Lua Path"),
+	AP_INIT_TAKE1("LuaCPath", set_luacpath, NULL, OR_OPTIONS, "Lua C Path"),
 	{ NULL }
 };
 

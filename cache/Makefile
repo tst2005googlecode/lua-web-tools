@@ -5,7 +5,7 @@ LUA_INSTALL = /usr/local/share/lua/5.1
 
 all: core.so memcached.so
 
-cache.o: core.h core.c
+core.o: core.h core.c
 	gcc -c -Wall -fPIC -I${LUA_INCLUDE} core.c
 
 core.so: core.o
@@ -15,7 +15,7 @@ memcached.o: core.h memcached.h memcached.c
 	gcc -c -Wall -fPIC -D_REENTRANT -I${LUA_INCLUDE} -I${MEMCACHED_INCLUDE} memcached.c
 
 memcached.so: memcached.o core.o
-	gcc -shared -o memcached.so memcached.o cache.o
+	gcc -shared -o memcached.so memcached.o core.o
 
 clean:
 	-rm core.o core.so

@@ -367,7 +367,7 @@ int cache_decode (lua_State *L) {
 	return 1;
 }
 
-int luaopen_cache (lua_State *L) {
+int luaopen_cache_core (lua_State *L) {
         const char *modname;
 
         /* register functions */
