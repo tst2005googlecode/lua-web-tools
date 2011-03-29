@@ -1,3 +1,7 @@
+/*
+ * Provides the IS MySQL module. See LICENSE for license terms.
+ */
+
 #include <stdlib.h>
 #include <string.h>
 #ifdef _REENTRANT
@@ -6,7 +10,7 @@
 #include <mysql.h>
 #include <lua.h>
 #include <lauxlib.h>
-#include "is.h"
+#include "core.h"
 #include "mysql.h"
 
 #define IS_MYSQL_METATABLE "is_mysql"

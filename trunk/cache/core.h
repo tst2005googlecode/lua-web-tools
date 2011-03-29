@@ -1,5 +1,9 @@
-#ifndef CACHE_INCLUDED
-#define CACHE_INCLUDED
+/*
+ * Provides the cache core module. See LICENSE for license terms.
+ */
+
+#ifndef CACHE_CORE_INCLUDED
+#define CACHE_CORE_INCLUDED
 
 #include <lua.h>
 
@@ -42,6 +46,6 @@ int cache_decode (lua_State *L);
  * @param L the Lua state
  * #return the number of results
  */ 
-int luaopen_cache (lua_State *L);
+int luaopen_cache_core (lua_State *L);
 
-#endif /* CACHE_INCLUDED */
+#endif /* CACHE_CORE_INCLUDED */

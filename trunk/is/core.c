@@ -1,7 +1,11 @@
+/*
+ * Provides the IS core module. See LICENSE for license terms.
+ */
+
 #include <string.h>
 #include <time.h>
 #include <lauxlib.h>
-#include "is.h"
+#include "core.h"
 
 /*
  * Connects to an information system.
@@ -12,8 +16,7 @@ static int is_connect (lua_State *L) {
         /* get driver */
         lua_getfield(L, -1, IS_FDRIVER);
         if (lua_isnil(L, -1)) {
-		lua_pushliteral(L, "no driver set on database");
-		lua_error(L);
+		luaL_error(L, "required field '%s' is missing", IS_FDRIVER);
         }
 
         /* get function */
@@ -24,8 +27,8 @@ static int is_connect (lua_State *L) {
 
         /* call */
         lua_insert(L, 1); /* function */
-	lua_insert(L, 1); /* driver */
-        lua_call(L, lua_gettop(L) - 2, 1);
+	lua_pop(L, 1); /* driver */
+        lua_call(L, lua_gettop(L) - 1, 1);
 
 	return 1;
 }
@@ -100,7 +103,7 @@ static const luaL_Reg functions[] = {
  * Exported functions.
  */
 
-int luaopen_is (lua_State *L) {
+int luaopen_is_core (lua_State *L) {
 	const char *modname;
 
 	/* register functions */	

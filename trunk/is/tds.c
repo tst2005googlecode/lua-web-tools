@@ -1,3 +1,7 @@
+/*
+ * Provides the IS TDS module. See LICENSE for license terms.
+ */
+
 #include <stdlib.h>
 #include <string.h>
 #ifdef _REENTRANT
@@ -8,7 +12,7 @@
 #include <sqlfront.h>
 #include <sybdb.h>
 #include <syberror.h>
-#include "is.h"
+#include "core.h"
 #include "tds.h"
 
 #define IS_TDS_METATABLE "is_tds"

@@ -1,3 +1,7 @@
+/*
+ * Provides the IS SQLite3 module. See LICENSE for license terms.
+ */
+
 #ifndef IS_SQLITE3_INCLUDED
 #define IS_SQLITE3_INCLUDED
 

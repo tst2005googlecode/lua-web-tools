@@ -1,3 +1,7 @@
+/*
+ * Provices the cache memcached module. See LICENSE for license terms.
+ */
+
 #ifndef CACHE_MEMCACHED_INCLUDED
 #define CACHE_MEMCACHED_INCLUDED
 
