@@ -3,4 +3,5 @@
 module(..., package.seeall)
 
 -- Imported functions from core
+require "cache.core"
 configure = cache.core.configure

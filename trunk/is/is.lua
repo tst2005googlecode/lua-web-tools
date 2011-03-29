@@ -3,6 +3,7 @@
 module(..., package.seeall)
 
 -- Imported functions from core
+require "is.core"
 connect = is.core.connect
 timegm = is.core.timegm
 
