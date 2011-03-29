@@ -1,0 +1,26 @@
+#summary Explains the configuration of mod_lwt in the Apache HTTP Server
+
+= Introduction =
+
+mod_lwt provides an Apache handler and associated configuration directives. 
+
+= Configuring the Handler =
+
+The handler provided by mod_lwt is called `lwt`. This handler handles requests to the HTTP server by invoking a Lua script. The handler is typically configured by having the following directive either in the global server configuration or in a virtual host configuration:
+
+{{{
+AddHandler lwt .lua
+}}}
+
+This directive associates the `lwt` handler with the `.lua` file extension. Requests for files ending in `.lua` are passed to the `lwt` handler.
+
+= Configuration Directives =
+
+mod_lwt provides several configuration directives. These directives can be used both in the server configuration and in the per-directory configuration. Use of these directives in a `.htaccess` file requires `AllowOverride Options`.
+
+mod_lwt provides the following configuration directives:
+
+  * LuaPath
+  * LuaCPath
+
+The `LuaPath` and `LuaCPath` directives configure the Lua path and Lua C path respectively. If these directives are not set, the Lua default values are used. See the [http://www.lua.org/manual/5.1/manual.html#5.3 Lua documentation] for information on the workings of the Lua path and Lua C path.
