@@ -1,9 +1,9 @@
 /**
- * Provides the LWT template functions.
+ * Provides the mod_lwt template functions. See LICENSE for license terms.
  */
 
-#ifndef LWT_TEMPLATE_INCLUDED
-#define LWT_TEMPLATE_INCLUDED
+#ifndef MOD_LWT_TEMPLATE_INCLUDED
+#define MOD_LWT_TEMPLATE_INCLUDED
 
 #include <apr_tables.h>
 #include <httpd.h>
@@ -57,4 +57,4 @@ apr_status_t lwt_template_render (request_rec *r, lua_State *L,
 apr_status_t lwt_template_dump (request_rec *r, lua_State *L,
 		apr_array_header_t *t, const char **err);
 
-#endif /* LWT_TEMPLATE_INCLUDED */
+#endif /* MOD_LWT_TEMPLATE_INCLUDED */

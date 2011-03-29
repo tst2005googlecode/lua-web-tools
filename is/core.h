@@ -1,5 +1,9 @@
-#ifndef IS_INCLIDED
-#define IS_INCLUDED
+/*
+ * Provides the IS core module. See LICENSE for license terms.
+ */
+
+#ifndef IS_CORE_INCLUDED
+#define IS_CORE_INCLUDED
 
 #include <lua.h>
 
@@ -53,6 +57,6 @@ typedef enum is_metadata_mode {
  * @param L the Lua state
  * @return 1 (module)
  */
-int luaopen_is (lua_State *L);
+int luaopen_is_core (lua_State *L);
 
-#endif /* IS_INCLUDED */
+#endif /* IS_CORE_INCLUDED */

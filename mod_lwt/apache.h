@@ -1,5 +1,5 @@
 /**
- * Provides LWT Apache interface functionaliy.
+ * Provides the mod_lwt HTTPD module for Apache. See LICENSE for license terms.
  */
 
 #ifndef LWT_APACHE_INCLUDED
@@ -9,12 +9,13 @@
 #include <httpd.h>
 #include <lua.h>
 
-#define LWT_APACHE_MODULE "httpd"
+#define LWT_APACHE_MODULE "httpd.core"
 #define LWT_APACHE_REQUEST_REC "lwt_request_rec"
 #define LWT_APACHE_REQUEST_REC_METATABLE "lwt_request_rec_metatable"
 #define LWT_APACHE_APR_TABLE_METATABLE "lwt_apr_table_metatable"
 
 #define LWT_APACHE_ARGLIMIT (1024 * 1024)
+#define LWT_APACHE_FILELIMIT (50 * 1024 * 1024)
 
 /**
  * Initializes the Lua support.

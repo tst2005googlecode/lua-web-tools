@@ -1,3 +1,7 @@
+/*
+ * Provides the IS MySQL module. See LICENSE for license terms.
+ */
+
 #ifndef IS_MYSQL_INCLUDED
 #define IS_MYSQL_INCLUDED
 

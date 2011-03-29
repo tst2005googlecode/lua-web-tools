@@ -1,3 +1,7 @@
+/*
+ * Provides the cache memcached module. See LICENSE for license terms.
+ */
+
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
@@ -9,7 +13,7 @@
 #include <endian.h>
 #include <lua.h>
 #include <lauxlib.h>
-#include "cache.h"
+#include "core.h"
 #include "memcached.h"
 
 #define CACHE_MEMCACHED_METATABLE "cache_memcached"

@@ -1,3 +1,7 @@
+/*
+ * Provides the IS TDS module. See LICENSE for license terms.
+ */
+
 #ifndef IS_TDS_INCLUDED
 #define IS_TDS_INCLUDED
 

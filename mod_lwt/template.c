@@ -1,3 +1,7 @@
+/*
+ * Provides the mod_lwt template functions. See LICENSE for license terms.
+ */
+
 #include <ctype.h>
 #include <apr_hash.h>
 #include <apr_strings.h>

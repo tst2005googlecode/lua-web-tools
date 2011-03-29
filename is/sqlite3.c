@@ -1,10 +1,14 @@
+/*
+ * Provides the IS SQLite3 module. See LICENSE for license terms.
+ */
+
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <sqlite3.h>
 #include <lua.h>
 #include <lauxlib.h>
-#include "is.h"
+#include "core.h"
 #include "sqlite3.h"
 
 #define IS_SQLITE3_METATABLE "is_sqlite3"

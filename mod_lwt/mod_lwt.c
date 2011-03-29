@@ -1,3 +1,7 @@
+/*
+ * Provides the mod_lwt Apache module. See LICENSE for license terms.
+ */
+
 #include <httpd.h>
 #include <http_protocol.h>
 #include <http_log.h>

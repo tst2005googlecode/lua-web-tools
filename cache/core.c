@@ -1,10 +1,14 @@
+/*
+ * Provides the cache core module. See LICENSE for license terms.
+ */
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <endian.h>
 #include <lua.h>
 #include <lauxlib.h>
-#include "cache.h"
+#include "core.h"
 
 /*
  * Initial size of a buffer.

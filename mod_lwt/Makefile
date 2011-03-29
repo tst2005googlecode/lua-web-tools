@@ -1,6 +1,7 @@
 APACHE2_BIN = /usr/bin
 APXS = apxs2
 LUA_INCLUDE = /usr/include/lua5.1
+LUA_INSTALL = /usr/local/share/lua/5.1
 
 all: mod_lwt.la
 
@@ -9,9 +10,10 @@ mod_lwt.la: mod_lwt.c util.h util.c template.h template.c apache.h apache.c
 
 install:
 	${APACHE2_BIN}/${APXS} -i -a mod_lwt.la
+	mkdir -p ${LUA_INSTALL}
+	cp httpd.lua ${LUA_INSTALL}
 
 clean:
-	-rm *.o
 	-rm *.la
 	-rm *.lo
 	-rm *.slo

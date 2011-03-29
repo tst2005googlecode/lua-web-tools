@@ -1,5 +1,5 @@
 /**
- * Provides the LWT Apache Lua module.
+ * Provides the mod_lwt HTTPD module for Apache. See LICENSE for license terms.
  */
 
 #include <time.h>
@@ -517,7 +517,6 @@ static const luaL_Reg functions[] = {
 	{ "escape_url", escape_url },
 	{ "read", read },
 	{ "write", write },
-	{ "time", lwt_util_time },
 	{ NULL, NULL }
 };
 
@@ -756,6 +755,7 @@ static apr_status_t decode_urlencoded (apr_table_t **args_out,
 typedef struct multipart_rec {
 	request_rec *r;
 	apr_file_t *F;
+	size_t fsize;
 	char *buf;
 	size_t bpos, bmark, blimit, bcapacity;
 	char *line;
@@ -764,7 +764,7 @@ typedef struct multipart_rec {
 	size_t xpos, xlimit;
 	char *value;
 	size_t vpos, vcapacity;
-	size_t acount;
+	size_t asize;
 } multipart_rec;
 
 /*
@@ -989,13 +989,19 @@ static apr_status_t multipart_process (multipart_rec *m) {
 
 	cnt = m->bpos - m->bmark;
 	if (m->F) {
+		if (m->fsize + cnt > LWT_APACHE_FILELIMIT) {
+			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, m->r,
+					"POST arguments too large");
+			return APR_EGENERAL;
+		}
 		if ((status = apr_file_write(m->F, m->buf + m->bmark, &cnt))
 				!= APR_SUCCESS) {
 			return status;
 		}
+		m->fsize += cnt;
 	} else {
 		if (cnt + 1 > m->vcapacity - m->vpos ||
-				m->acount + cnt > LWT_APACHE_ARGLIMIT) {
+				m->asize + cnt > LWT_APACHE_ARGLIMIT) {
 			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, m->r,
 					"POST arguments too large");
 			return APR_EGENERAL;
@@ -1003,7 +1009,7 @@ static apr_status_t multipart_process (multipart_rec *m) {
 		memcpy(m->value + m->vpos, m->buf + m->bmark, cnt);
 		m->vpos += cnt;
 		m->value[m->vpos] = '\0';
-		m->acount += cnt;
+		m->asize += cnt;
 	}	
 
 	return APR_SUCCESS;
@@ -1161,12 +1167,12 @@ static apr_status_t read_multipart (apr_table_t **args_out, request_rec *r) {
 
 		/* increase argument size by one line capacity to prevent */
 		/* a denial of service attack with many small arguments */
-		if (m->acount + m->lcapacity > LWT_APACHE_ARGLIMIT) {
+		if (m->asize + m->lcapacity > LWT_APACHE_ARGLIMIT) {
 			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
 					"POST arguments too large");
 			return APR_EGENERAL;
 		}
-		m->acount += m->lcapacity;
+		m->asize += m->lcapacity;
 
 		/* setup */
 		if (filename) {

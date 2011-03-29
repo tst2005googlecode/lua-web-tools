@@ -1,27 +1,29 @@
 LUA_INCLUDE = /usr/include/lua5.1
 MEMCACHED_INCLUDE = /usr/include/memcached
+LIB_INSTALL = /usr/local/lib/lua/5.1
+LUA_INSTALL = /usr/local/share/lua/5.1
 
-INST = /usr/local/lib/lua/5.1
+all: core.so memcached.so
 
-all: cache.so memcached.so
+cache.o: core.h core.c
+	gcc -c -Wall -fPIC -I${LUA_INCLUDE} core.c
 
-cache.o: cache.h cache.c
-	gcc -c -Wall -fPIC -I${LUA_INCLUDE} cache.c
+core.so: core.o
+	gcc -shared -o core.so core.o
 
-cache.so: cache.o
-	gcc -shared -o cache.so cache.o
-
-memcached.o: cache.h memcached.h memcached.c
+memcached.o: core.h memcached.h memcached.c
 	gcc -c -Wall -fPIC -D_REENTRANT -I${LUA_INCLUDE} -I${MEMCACHED_INCLUDE} memcached.c
 
-memcached.so: memcached.o cache.o
+memcached.so: memcached.o core.o
 	gcc -shared -o memcached.so memcached.o cache.o
 
 clean:
-	-rm cache.o cache.so
+	-rm core.o core.so
 	-rm memcached.o memcached.so
 
 install: all
-	mkdir -p ${INST}/cache
-	cp cache.so ${INST}
-	cp memcached.so ${INST}/cache
+	mkdir -p ${LIB_INSTALL}/cache
+	cp core.so ${LIB_INSTALL}/cache
+	cp memcached.so ${LIB_INSTALL}/cache
+	mkdir -p ${LUA_INSTALL}
+	cp cache.lua ${LUA_INSTALL}
