@@ -20,7 +20,7 @@ mod_lwt provides several configuration directives. These directives can be used 
 
 mod_lwt provides the following configuration directives:
 
-  * LuaPath
-  * LuaCPath
+  * `LuaPath`
+  * `LuaCPath`
 
 The `LuaPath` and `LuaCPath` directives configure the Lua path and Lua C path respectively. If these directives are not set, the Lua default values are used. See the [http://www.lua.org/manual/5.1/manual.html#5.3 Lua documentation] for information on the workings of the Lua path and Lua C path.
