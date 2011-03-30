@@ -10,12 +10,12 @@ The mod_lwt handler handles requests to the HTTP server by invoking a Lua script
   # Create a new Lua state.
   # Open the standard Lua libraries in the Lua state.
   # Open the `httpd.core` library in the Lua state. (This is an internal library that is exposed to scripts by the `httpd` module.)
-  # Load the Lua script to run, reporting syntax errors in HTML. Return a HTTP 500 (Internal Server Error) status code if an out of memory error or IO error in encountered.
+  # Load the Lua script to run, reporting syntax errors in HTML. Return a HTTP 500 (Internal Server Error) status code if a syntax error, an out of memory error or an IO error in encountered.
   # Set the `package.path` and `package.cpath` variables according to the configuration directives applicable to the script.
-  # Invoke the script, passing the _request_ and _args_ values as detailed below, reporting any runtime errors in HTML. Return a HTTP 500 (Internal Server Error) status code if an out of memory error or error handler error is encountered.
-  # If the script returns no value or `nil`, assume the request was handled successfully; if the script returns a number between 100 and 599, return it as the HTTP status code; return a HTTP 500 (Internal Server Error) status code for all other return values.
+  # Invoke the script, passing the _request_ and _args_ values as detailed below, reporting any runtime errors in HTML. Return a HTTP 500 (Internal Server Error) status code if a runtime error, an out of memory error or error handler error is encountered.
+  # If the script returns no value or `nil`, assume the request was handled successfully and respond with a HTTP 200 (OK) status code; if the script returns a number between 100 and 599, use that number as the HTTP status code; assume a HTTP 500 (Internal Server Error) status code for all other return values. A return value other than none or `nil` defers processing to the Apache error document handling.
 
-Note that a new Lua state is created for each request and that mod_lwt is thus completely stateless. This is a deliberate design decision. If you need to maintain state between requests, use tools such as HTTP arguments and cookies, databases and caches in a combination that is suitable to your requirements.
+Note that a new Lua state is created for each request and that mod_lwt is thus *completely stateless*. This is a deliberate design decision. If you need to maintain state between requests, use tools such as HTTP arguments and cookies, databases and caches in a combination that is suitable to your requirements.
 
 = Example =
 
@@ -41,10 +41,10 @@ The `request` value is passed as the first argument to a Lua script. It is a tab
 
 || *Field* || *Description *||
 || `protocol` || The protocol used in the request, e.g. `HTTP/1.1`. ||
-|| `hostname` || The hostname portion of the URL, e.g. `www.mydomain.com`. ||
-|| `path` || The path portion of the URL, e.g. `/test.lua` ||
+|| `hostname` || The host of the request, e.g. `www.mydomain.com`. ||
+|| `path` || The path portion of the URI, e.g. `/test.lua` ||
 || `path_info` || Any path information following the requested Lua script, including the beginning slash, e.g. `/additonal/path/segments`. If there is no additional path information, the field contains the empty string. ||
-|| `args` || The arguments portion of the URL, e.g. `name=value&name2=value2`. If there are no arguments, the field contains the empty string. ||
+|| `args` || The arguments portion of the URI, e.g. `name=value&name2=value2`. If there are no arguments, the field contains the empty string. ||
 || `method` || The request method, e.g. `GET` or `POST`. ||
 || `headers_in` || A table-like userdata value containing the request input headers. Use the `httpd.pairs` function to iterate over this table. ||
 || `headers_out` || A table-like userdata value containing the request output headers. Use the `httpd.pairs` function to iterate over this table. These headers are only transmitted for successful request. For example, a `Location` header used in a redirect should _not_ go here as these headers would not be transmitted if the script returns a 3xx redirect HTTP status code. ||
@@ -62,11 +62,10 @@ Note that the `request` value is a userdata value that cannot be iterated with t
 
 The `args` value is passed as the second argument to a Lua script. It is a table-like userdata value and contains the arguments passed with the current request. More specifically, mod_lwt decodes the following types of arguments:
 
-  * `GET` arguments from the URL
-  * `POST` arguments using a content type of `application/x-www-form-urlencoded` (regular form post)
-  * `POST` arguments using a content type of `multipart/form-data` (typically used for file uploads)
+  * `GET` requests: arguments from the URI
+  * `POST` requests: arguments from the body with a content type of `application/x-www-form-urlencoded` (regular form post), or `multipart/form-data` (typically used for file uploads)
 
-For other content types, no processing is done by mod_lwt, and the Lua script can process the request body directly.
+For other methods and content types, no processing is done by mod_lwt, and the Lua script can process the request body directly.
 
 The fields of the `args` value can be accessed by name (e.g. `args.field`) or by iterating over the arguments using the `httpd.pairs` function. The latter method must be used if there are multiple values with the same name in the arguments.
 
