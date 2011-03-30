@@ -1,7 +1,20 @@
 #summary Explains how to compile and install LWT.
 #labels Phase-Deploy
 
+= Introduction =
+
 This page describes the installation of LWT on an Ubuntu Linux system. You may have to modify these instructions and the makefiles in order to compile and install LWT on other systems.
+
+<wiki:toc max_depth="2" />
+
+= Checkout =
+
+Checkout LWT from its Subversion repository:
+
+{{{
+svn checkout http://lua-web-tools.googlecode.com/svn/trunk lwt
+cd lwt
+}}}
 
 = Installation of mod_lwt =
 
@@ -24,13 +37,6 @@ $ sudo apt-get install apache2-dev lua5.1 liblua5.1-dev
 
 == Building and Installing ==
 
-=== Checkout ===
-
-{{{
-svn checkout http://lua-web-tools.googlecode.com/svn/trunk lwt
-cd lwt
-}}}
-
 === Compile ===
 
 {{{
@@ -47,9 +53,9 @@ sudo make install
 cd ..
 }}}
 
-= Installation of the `is` module (optional) =
+= Installation of the IS Module (Optional) =
 
-The `is` module provides an API to access information systems from Lua.
+The IS module provides an API to access information systems from Lua.
 
 == Prerequisites ==
 
@@ -82,16 +88,16 @@ make
 
 === Install ===
 
-The makefile installs the `is` module in `/usr/local/lib/lua/5.1` and `/usr/local/share/lua/5.1`.
+The makefile installs the IS module in `/usr/local/lib/lua/5.1` and `/usr/local/share/lua/5.1`.
 
 {{{
 sudo make install
 cd ..
 }}}
 
-= Installation of the `cache` module (optional) =
+= Installation of the Cache Module (Optional) =
 
-The `cache` module provides an API to access memcached from Lua.
+The cache module provides an API to access memcached from Lua.
 
 == Prerequisites ==
 
@@ -116,7 +122,7 @@ make
 
 === Install ===
 
-The makefile installs the `cache` module in `/usr/local/lib/lua/5.1` and `/usr/local/share/lua/5.1`.
+The makefile installs the cache module in `/usr/local/lib/lua/5.1` and `/usr/local/share/lua/5.1`.
 
 {{{
 sudo make install
@@ -125,7 +131,7 @@ cd ..
 
 = Test =
 
-To install `mod_lwt` globally, create `/etc/apache2/mods-available/lwt.conf` with the following content:
+To install mod_lwt globally, create `/etc/apache2/mods-available/lwt.conf` with the following content:
 
 {{{
 <IfModule mod_lwt.c>
@@ -133,7 +139,7 @@ AddHandler lwt .lua
 </IfModule>
 }}}
 
-(You can also copy the supplied `lwt.conf` from the `mod_lwt/etc` directory.)
+(You can also copy the supplied `lwt.conf` file from the `mod_lwt/etc` directory.)
 
 Then activate the module and restart the Apache HTTP Server:
 
