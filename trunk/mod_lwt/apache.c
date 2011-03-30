@@ -478,34 +478,6 @@ static int escape_url (lua_State *L) {
 }
 
 /*
- * Invokes apache.input:read(...).
- */
-static int read (lua_State *L) {
-	lua_getglobal(L, LWT_APACHE_MODULE);
-	lua_getfield(L, -1, "input");
-	lua_insert(L, 1);
-	lua_getfield(L, 1, "read");
-	lua_insert(L, 1);
-	lua_pop(L, 1);
-	lua_call(L, lua_gettop(L) - 1, LUA_MULTRET);
-	return lua_gettop(L);
-}
-
-/*
- * Invokes apache.response:write(...).
- */
-static int write (lua_State *L) {
-	lua_getglobal(L, LWT_APACHE_MODULE);
-	lua_getfield(L, -1, "output");
-	lua_insert(L, 1);
-	lua_getfield(L, 1, "write");
-	lua_insert(L, 1);
-	lua_pop(L, 1);
-	lua_call(L, lua_gettop(L) - 1, LUA_MULTRET);
-	return lua_gettop(L);
-}
-
-/*
  * LWT functions
  */
 static const luaL_Reg functions[] = {
@@ -515,8 +487,6 @@ static const luaL_Reg functions[] = {
 	{ "write_template", write_template },
 	{ "escape_html", escape_html },
 	{ "escape_url", escape_url },
-	{ "read", read },
-	{ "write", write },
 	{ NULL, NULL }
 };
 
