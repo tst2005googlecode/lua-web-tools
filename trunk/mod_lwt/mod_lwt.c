@@ -219,6 +219,7 @@ static int handler (request_rec *r) {
 				ap_escape_html(r->pool, error_message));
 		ap_rputs("</body>\n", r);
 		ap_rputs("</html>\n", r);
+		r->status = HTTP_INTERNAL_SERVER_ERROR;
 		return OK;
 
 	case LUA_ERRMEM:
@@ -293,6 +294,7 @@ static int handler (request_rec *r) {
 				ap_escape_html(r->pool, r->filename));
 		ap_rprintf(r, "<pre>%s</pre>\n",
 				ap_escape_html(r->pool, error_message));
+		r->status = HTTP_INTERNAL_SERVER_ERROR;
 		return OK;
 		
 	case LUA_ERRMEM:
