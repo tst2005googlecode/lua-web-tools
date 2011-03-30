@@ -9,8 +9,18 @@ set_cookie = httpd.core.set_cookie
 write_template = httpd.core.write_template
 escape_html = httpd.core.escape_html
 escape_url = httpd.core.escape_url
-read = httpd.core.read
-write = httpd.core.write
+input = httpd.core.input
+output = httpd.core.output
+
+-- Read
+function read (...)
+	return input:read(...)
+end
+
+-- Output
+function write (...)
+	return output:write(...)
+end
 
 -- Redirects
 function redirect (request, uri, status)
