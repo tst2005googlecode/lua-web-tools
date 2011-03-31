@@ -52,8 +52,12 @@ Escapes XML reserved characters in a string and returns the escaped string. More
 
 == `httpd.escape_url (string)` == 
 
-Escapes URL reserved characters in a string and returns the escaped string. More specifically, alphanumeric characters, `-`, `.`, `_`, and `~` are considered unreserved characters, and all other characters are considered reserved characters according to RFC 3986. Reserved characters are escaped by a percent sign followed by two hexadecimal digits representing the value of the escaped characters.
+Escapes URL reserved characters in a string and returns the escaped string. More specifically, alphanumeric characters, `-`, `.`, `_`, and `~` are considered unreserved characters, and all other characters are considered reserved characters according to RFC 3986. Reserved characters are escaped by a percent sign followed by two hexadecimal digits representing the value of the escaped character.
 
 == `httpd.input` ==
 
+A file descriptor for reading from the HTTP request body. The file descriptor behaves like a regular Lua file descriptor.
+
 == `httpd.output` ==
+
+A file descriptor for writing to the HTTP response body. The file descriptor behaves like a regular Lua file descriptor.
