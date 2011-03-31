@@ -40,6 +40,14 @@ Writes a template from a file referenced by `filename`. `flags` is a string with
   * `n`: substitute an empty string for `nil` expressions
   * `e`: substitute an empty string for expressions with a runtime error
 
+If `flags` is absent, it defaults to `px`.
+
+If a template is parsed, the following elements are processed by the template engine:
+
+|| *Element* || *Description* ||
+|| `<l:if cond="cond_0"> template_0 <l:elseif cond="cond_1" /> template_1 ... <l:elseif cond="cond_n" /> template_n <l:else /> template_else </l:if>` || Evaluates `cond_0` and processes `template_0` if true, otherwise continues to evaluate `cond_1` to `cond_n` processing one of `template_1` to `template_n` if the respective condition is true, otherwise processes `template_else`. The use of the `l:elseif` and `l:else` elements is optional. ||
+|| `<l:for names="name_1, name_2, ... , name_n" in="iterator_exp"> template </l:for>` || Evaluates the construction `for name_1, name_2, ..., name_n in iterator_exp do ... end` processing `template` in each loop. ||
+
 == `httpd.escape_xml (string)` ==
 
 Escapes XML reserved characters in a string and returns the escaped string. More specifically, the following characters are escaped:
