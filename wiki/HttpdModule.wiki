@@ -61,3 +61,17 @@ A file descriptor for reading from the HTTP request body. The file descriptor be
 == `httpd.output` ==
 
 A file descriptor for writing to the HTTP response body. The file descriptor behaves like a regular Lua file descriptor.
+
+== `httpd.read (...)` ==
+
+Equivalent to `httpd.input:read(...)`.
+
+== `httpd.write (...)` ==
+
+Equivalent to `httpd.output:write(...)`.
+
+== `httpd.redirect (request, uri, status)` ==
+
+Sets a  `Location` header with a value of `http://{request.hostname}{uri}` and returns `status`. The idiom for using this function is `return httpd.redirect(request, "/next.lua", status)` where `status` is an appropriate 3xx status code.
+
+
