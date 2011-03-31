@@ -356,7 +356,7 @@ const char *cookie_months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
 /*
  * Sets a cookie.
  */
-static int set_cookie (lua_State *L) {
+static int add_cookie (lua_State *L) {
 	const char *name, *value, *path, *domain;
 	time_t expires;
 	int secure, httponly;
@@ -394,7 +394,7 @@ static int set_cookie (lua_State *L) {
 	if (value != NULL) {
 		p += sprintf(cookie + p, "%s", value);
 	}
-	if (expires != -1) {
+	if (expires >= 0) {
 		if (gmtime_r(&expires, &t) == NULL) {
 			luaL_error(L, "error encoding time");
 		}
@@ -448,9 +448,9 @@ static int write_template (lua_State *L) {
 }
 
 /*
- * Escapes HTML reseved characters in a string.
+ * Escapes XML reseved characters in a string.
  */
-static int escape_html (lua_State *L) {
+static int escape_xml (lua_State *L) {
 	const char *s;
 	request_rec *r;
 
@@ -483,9 +483,9 @@ static int escape_url (lua_State *L) {
 static const luaL_Reg functions[] = {
 	{ "pairs", pairs },
 	{ "set_content_type", set_content_type },
-	{ "set_cookie", set_cookie },
+	{ "add_cookie", add_cookie },
 	{ "write_template", write_template },
-	{ "escape_html", escape_html },
+	{ "escape_xml", escape_xml },
 	{ "escape_url", escape_url },
 	{ NULL, NULL }
 };
