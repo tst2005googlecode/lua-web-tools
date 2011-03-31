@@ -72,6 +72,27 @@ Equivalent to `httpd.output:write(...)`.
 
 == `httpd.redirect (request, uri, status)` ==
 
-Sets a  `Location` header with a value of `http://{request.hostname}{uri}` and returns `status`. The idiom for using this function is `return httpd.redirect(request, "/next.lua", status)` where `status` is an appropriate 3xx status code.
+Sets a  `Location` header with a value of `http://{request.hostname}{uri}` and returns `status`. The idiom for using this function is
 
+{{{
+return httpd.redirect(request, "/next.lua", status)
+}}}
 
+where `status` is an appropriate 3xx status code.
+
+== `httpd.dump (value)` ==
+
+Writes `value` to the HTTP response body formatted in HTML. The function handles both tables and recursion.
+
+== `httpd.match (path, ...)` ==
+
+Matches `path` against the patterns following it and returns the captured values of the first matching pattern with numbers from empty captures replaced by `nil`. The ididom for using this function is
+
+{{{
+a, b, c = httpd.match(request.path_info,
+        "^/(%w+)/(%w+)/(%d+)$",
+        "^/(%w+)/(%w+)$",
+        "^/()(%w+)$")
+}}}
+
+where the return values are parameters extracted from the request URI using the supplied templates.
