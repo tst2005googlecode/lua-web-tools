@@ -5,9 +5,9 @@ module(..., package.seeall)
 -- Imported functions from core
 pairs = httpd.core.pairs
 set_content_type = httpd.core.set_content_type
-set_cookie = httpd.core.set_cookie
+add_cookie = httpd.core.add_cookie
 write_template = httpd.core.write_template
-escape_html = httpd.core.escape_html
+escape_xml = httpd.core.escape_xml
 escape_url = httpd.core.escape_url
 input = httpd.core.input
 output = httpd.core.output

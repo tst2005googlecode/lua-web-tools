@@ -536,9 +536,9 @@ static apr_status_t process_set (parser_rec *p, const char *element,
                 if (apr_is_empty_array(n->set_names)) {
                         return parse_error(p, "empty 'names'");
                 }
-                n->set_exp = apr_table_get(attrs, "exp");
+                n->set_exp = apr_table_get(attrs, "exps");
                 if (n->set_exp == NULL) {
-                        return parse_error(p, "missing attribute 'exp'");
+                        return parse_error(p, "missing attribute 'exps'");
                 }
                 if ((status = compile_exp(p, n->set_exp, &n->set_index))
 				!= APR_SUCCESS) {
