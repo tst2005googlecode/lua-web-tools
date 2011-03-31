@@ -1,0 +1,41 @@
+#summary HTTPD module API
+
+= Introduction =
+
+This page describes the functions provided by the HTTPD Module.
+
+= Import =
+
+{{{
+require "httpd"
+}}}
+
+= Functions =
+
+== `httpd.pairs (apr_table)` ==
+
+Returns three values so that the construction
+
+{{{
+for key, value in httpd.pairs(t) do body end
+}}}
+
+will iterate over all key-value pairs in the passed APR table. This function is used with the header tables of the `request` value and the `args` value.
+
+== `httpd.set_content_type (content_type)` ==
+
+Sets the response content type to `content_type`.
+
+== `httpd.add_cookie (name [, value [, expires [, path [, domain [, secure [, httponly]]]]]])` ==
+
+Adds a cookie `name`. If `value` is a string, it represents the value of the cookie, otherwise the value of the cookie is the empty string. If `expires` is a non-negative number, it represents the expiry of the cookie as a Unix timestamp, otherwise the cookie is valid for the session only. If `path` and `domain` are string values, they represent the path and domain of the cookie respectively, otherwise the cookie is added without an explicit path or domain. If `secure` and `httponly` are `true` when evaluated as boolean values, they indicate that the cookie must only be transmitted on secure connections and that the cookie is unavailable to client-side scripting respectively, otherwise the cookie is added without these security restrictions.
+
+== `httpd.write_template (filename [, flags])` ==
+
+== `httpd.escape_xml (string)` ==
+
+== `httpd.escape_url (string)` == 
+
+== `httpd.input` ==
+
+== `httpd.output` ==
