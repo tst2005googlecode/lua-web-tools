@@ -32,7 +32,23 @@ Adds a cookie `name`. If `value` is a string, it represents the value of the coo
 
 == `httpd.write_template (filename [, flags])` ==
 
+Writes a template from a file referenced by `filename`. `flags` is a string with each character modifying the template writing process as follows: 
+
+  * `p`: parse the template; if absent, the template is written as is
+  * `x`: escape XML reserved characters in substitutions
+  * `u`: escape URL reserved characters in substitutions
+  * `n`: substitute an empty string for `nil` expressions
+  * `e`: substitute an empty string for expressions with a runtime error
+
 == `httpd.escape_xml (string)` ==
+
+Escapes XML reserved characters in a string and returns the escaped string. More specifically, the following characters are escaped:
+
+|| *Character* || *Escape* ||
+|| & || &quot; ||
+|| `"` || `&quot;` ||
+|| `<` || `&lt;` ||
+|| `>` || `&gt;` ||
 
 == `httpd.escape_url (string)` == 
 
