@@ -675,14 +675,10 @@ static apr_status_t read_request_body (char **body, apr_size_t limit,
 /*
  * Deoodes URL encoded arguments.
  */
-static apr_status_t decode_urlencoded (apr_table_t **args_out,
-		char *urlencoded_args, request_rec *r) {
-	apr_table_t *args;
+static apr_status_t decode_urlencoded (apr_table_t *args, char *urlencoded_args,
+		request_rec *r) {
 	char *tok, *last, *pos;
 	const char *sep = "&";
-
-	/* create result table */
-	args = apr_table_make(r->pool, 4);
 
 	/* decode arguments */
 	tok = apr_strtok(urlencoded_args, sep, &last);
@@ -715,7 +711,6 @@ static apr_status_t decode_urlencoded (apr_table_t **args_out,
 		tok = apr_strtok(NULL, sep, &last);
 	}
 
-	*args_out = args;
 	return APR_SUCCESS;
 }
 
@@ -1049,10 +1044,9 @@ static apr_status_t multipart_scan (multipart_rec *m) {
 /*
  * Reads a multipart/form-data post.
  */
-static apr_status_t read_multipart (apr_table_t **args_out, request_rec *r) {
+static apr_status_t read_multipart (apr_table_t *args, request_rec *r) {
 	const char *content_type;
 	multipart_rec *m;
-	apr_table_t *args;
 	apr_status_t status;
 	char *headername, *headervalue, *name, *filename;
 	const char *tempdir;
@@ -1088,9 +1082,6 @@ static apr_status_t read_multipart (apr_table_t **args_out, request_rec *r) {
 	}
 	m->boundary = apr_pstrcat(r->pool, "\r\n--", m->boundary, NULL);
 	m->xlimit = strlen(m->boundary);
-
-	/* create arguments table */
-	args = apr_table_make(r->pool, 4);
 
 	/* read initial boundary */
 	if ((status = multipart_readline(m)) != APR_SUCCESS) {
@@ -1189,9 +1180,6 @@ static apr_status_t read_multipart (apr_table_t **args_out, request_rec *r) {
 		}
 	}
 
-	if (args_out) {
-		*args_out = args;
-	}
 	return APR_SUCCESS;
 }
 
@@ -1248,58 +1236,45 @@ apr_status_t lwt_apache_push_args (lua_State *L, request_rec *r) {
 	apr_status_t status;
 	const char *content_type, *content_type_noparam;
 
-	/* handle request types */	
-	args = NULL;
-	switch (r->method_number) {
-	case M_GET:
-		if (r->args != NULL) {
-			if (strlen(r->args) > LWT_APACHE_ARGLIMIT) {
-				ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-						"GET arguments too large");
-				return APR_EGENERAL;
+	/* extract args */
+	args = apr_table_make(r->pool, 4);
+	if (r->args != NULL) {
+		if (strlen(r->args) > LWT_APACHE_ARGLIMIT) {
+			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+					"GET arguments too large");
+			return APR_EGENERAL;
+		}
+		urlencoded_args = apr_pstrdup(r->pool, r->args);
+		if ((status = decode_urlencoded(args, urlencoded_args, r))
+				!= APR_SUCCESS) {
+			return status;
+		}
+	}
+	content_type = apr_table_get(r->headers_in, "Content-type");
+	if (content_type) {
+		content_type_noparam = ap_field_noparam(r->pool, content_type);
+		if (strcasecmp("application/x-www-form-urlencoded",
+				content_type_noparam) == 0) {
+			if ((status = read_request_body(&urlencoded_args,
+					LWT_APACHE_ARGLIMIT, r))
+					!= APR_SUCCESS) {
+				return status;
 			}
-			urlencoded_args = apr_pstrdup(r->pool, r->args);
-			if ((status = decode_urlencoded(&args, urlencoded_args,
+			get_lwt_request_rec(L)->in_ready = 1;
+			if ((status = decode_urlencoded(args, urlencoded_args,
 					r)) != APR_SUCCESS) {
 				return status;
 			}
-		}
-		break;
-
-	case M_POST:	
-		content_type = apr_table_get(r->headers_in, "Content-Type");
-		if (content_type) {
-			content_type_noparam = ap_field_noparam(r->pool,
-					content_type);
-			if (strcasecmp("application/x-www-form-urlencoded",
-					content_type_noparam) == 0) {
-				if ((status = read_request_body(
-						&urlencoded_args,
-						LWT_APACHE_ARGLIMIT,  r))
-						!= APR_SUCCESS) {
-					return status;
-				}
-				get_lwt_request_rec(L)->in_ready = 1;
-				if ((status = decode_urlencoded(&args,
-						urlencoded_args, r))
-						!= APR_SUCCESS) {
-					return status;
-				}
-			} else if (strcasecmp("multipart/form-data",
-					content_type_noparam) == 0) {
-				if ((status = read_multipart(&args, r))
-						!= APR_SUCCESS) {
-					return status;
-				}
-				get_lwt_request_rec(L)->in_ready = 1;
+		} else if (strcasecmp("multipart/form-data",
+				content_type_noparam) == 0) {
+			if ((status = read_multipart(args, r)) != APR_SUCCESS) {
+				return status;
 			}
+			get_lwt_request_rec(L)->in_ready = 1;
 		}
 	}
 
-	/* finalize and push arguments */
-	if (!args) {
-		args = apr_table_make(r->pool, 0);
-	}
+	/* push arguments */
 	*((apr_table_t **) lua_newuserdata(L, sizeof(apr_table_t *))) = args;
 	luaL_getmetatable(L, LWT_APACHE_APR_TABLE_METATABLE);
 	lua_setmetatable(L, -2);
