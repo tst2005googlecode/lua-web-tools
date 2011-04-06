@@ -64,7 +64,7 @@ typedef struct template_node_t {
                 };
 		struct {
 			apr_array_header_t *set_names;
-			const char *set_exp;
+			const char *set_expressions;
 			int set_index;
 		};
 		struct {
@@ -536,11 +536,12 @@ static apr_status_t process_set (parser_rec *p, const char *element,
                 if (apr_is_empty_array(n->set_names)) {
                         return parse_error(p, "empty 'names'");
                 }
-                n->set_exp = apr_table_get(attrs, "exps");
-                if (n->set_exp == NULL) {
-                        return parse_error(p, "missing attribute 'exps'");
+                n->set_expressions = apr_table_get(attrs, "expressions");
+                if (n->set_expressions == NULL) {
+                        return parse_error(p, "missing attribute "
+					"'expressions'");
                 }
-                if ((status = compile_exp(p, n->set_exp, &n->set_index))
+                if ((status = compile_exp(p, n->set_expressions, &n->set_index))
 				!= APR_SUCCESS) {
                         return status;
                 }
@@ -1185,8 +1186,9 @@ apr_status_t lwt_template_dump (request_rec *r, lua_State *L,
 			break;
 
 		case TEMPLATE_TSET:
-			ap_rprintf(r, "SET names=#%d exp=%s",
-					n->set_names->nelts, n->set_exp);
+			ap_rprintf(r, "SET names=#%d expressions=%s",
+					n->set_names->nelts,
+					n->set_expressions);
 			break;
 
 		case TEMPLATE_TINCLUDE:
