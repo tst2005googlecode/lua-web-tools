@@ -13,15 +13,22 @@
 #include "template.h"
 #include "apache.h"
 
-/*
+/**
  * LWT configuration.
  */
 typedef struct lwt_conf_t {
 	const char *path;
 	const char *cpath;
+	int erroroutput;	
 } lwt_conf_t;
 
 /*
+ * Error output.
+ */
+#define MOD_LWT_ERROROUTPUT_OFF 1
+#define MOD_LWT_ERROROUTPUT_ON 2
+
+/**
  * LWT statistics.
  */
 typedef struct lwt_stat_t {
@@ -61,6 +68,8 @@ static void *merge_conf (apr_pool_t *p, void *base, void *add) {
 	merged_conf->path = add_conf->path ? add_conf->path : base_conf->path;
 	merged_conf->cpath = add_conf->cpath ? add_conf->cpath
 			: base_conf->cpath;
+	merged_conf->erroroutput = add_conf->erroroutput ? add_conf->erroroutput
+			: base_conf->erroroutput;
 
 	return merged_conf;
 }
@@ -82,11 +91,22 @@ static const char *set_luacpath (cmd_parms *cmd, void *conf, const char *arg) {
 }
 
 /*
+ * Sets the Lua error output in an LWT configuration.
+ */
+static const char *set_luaerroroutput(cmd_parms *cmd, void *conf, int flag) {
+	((lwt_conf_t *) conf)->erroroutput = flag ? MOD_LWT_ERROROUTPUT_ON
+			: MOD_LWT_ERROROUTPUT_OFF;
+	return NULL;
+}
+
+/*
  * LWT configuration directives.
  */
 static const command_rec commands[] = {
 	AP_INIT_TAKE1("LuaPath", set_luapath, NULL, OR_OPTIONS, "Lua Path"),
 	AP_INIT_TAKE1("LuaCPath", set_luacpath, NULL, OR_OPTIONS, "Lua C Path"),
+	AP_INIT_FLAG("LuaErrorOutput", set_luaerroroutput, NULL, OR_OPTIONS,
+			"Lua Error Output"),
 	{ NULL }
 };
 
@@ -197,6 +217,16 @@ static int handler (request_rec *r) {
 	lua_pushstring(L, LWT_APACHE_MODULE);
 	lua_call(L, 1, 0);
 
+        /* apply configuration */
+	server_conf = (lwt_conf_t *) ap_get_module_config(
+			r->server->module_config, &lwt_module);
+	dir_conf = ap_get_module_config(r->per_dir_config, &lwt_module);
+	conf = merge_conf(r->pool, server_conf, dir_conf);
+	if ((status = lwt_apache_set_module_path(L, conf->path, conf->cpath, r))
+			!= APR_SUCCESS) {
+		return HTTP_INTERNAL_SERVER_ERROR;
+	}
+
 	/* push error function for traceback */
 	lua_pushcfunction(L, lwt_util_traceback);
 
@@ -207,20 +237,24 @@ static int handler (request_rec *r) {
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
 				"Lua syntax error compiling '%s': %s",
 				r->filename, error_message);
-		ap_rputs(DOCTYPE_XHTML_1_0S, r);
-		ap_rputs("<html>\n", r);
-		ap_rputs("<head><title>Lua Compilation Error</title></head>\n",
-				r);
-		ap_rputs("<body>\n", r);
-		ap_rputs("<h1>Lua Compilation Error</h1>\n", r);
-		ap_rprintf(r, "<p>Error compiling '%s'.</p>\n",
-				ap_escape_html(r->pool, r->filename));
-		ap_rprintf(r, "<pre>%s</pre>\n",
-				ap_escape_html(r->pool, error_message));
-		ap_rputs("</body>\n", r);
-		ap_rputs("</html>\n", r);
-		r->status = HTTP_INTERNAL_SERVER_ERROR;
-		return OK;
+		if (conf->erroroutput == MOD_LWT_ERROROUTPUT_ON) {
+			ap_rputs("<!DOCTYPE HTML>\r\n", r);
+			ap_rputs("<html>\r\n", r);
+			ap_rputs("<head><title>Lua Compilation Error</title>"
+					"</head>\r\n", r);
+			ap_rputs("<body>\r\n", r);
+			ap_rputs("<h1>Lua Compilation Error</h1>\r\n", r);
+			ap_rprintf(r, "<p>Error compiling '%s'.</p>\r\n",
+					ap_escape_html(r->pool, r->filename));
+			ap_rprintf(r, "<pre>%s</pre>\r\n",
+					ap_escape_html(r->pool, error_message));
+			ap_rputs("</body>\r\n", r);
+			ap_rputs("</html>\r\n", r);
+			r->status = HTTP_INTERNAL_SERVER_ERROR;
+			return OK;
+		} else {
+			return HTTP_INTERNAL_SERVER_ERROR;
+		}
 
 	case LUA_ERRMEM:
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
@@ -232,16 +266,6 @@ static int handler (request_rec *r) {
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
 				"Lua file read error compiling '%s'",
 				r->filename);
-		return HTTP_INTERNAL_SERVER_ERROR;
-	}
-
-        /* apply configuration */
-	server_conf = (lwt_conf_t *) ap_get_module_config(
-			r->server->module_config, &lwt_module);
-	dir_conf = ap_get_module_config(r->per_dir_config, &lwt_module);
-	conf = merge_conf(r->pool, server_conf, dir_conf);
-	if ((status = lwt_apache_set_module_path(L, conf->path, conf->cpath, r))
-			!= APR_SUCCESS) {
 		return HTTP_INTERNAL_SERVER_ERROR;
 	}
 
@@ -278,6 +302,7 @@ static int handler (request_rec *r) {
 					"Lua handler '%s' returns illegal "
 					"%s status", r->filename,
 					lua_typename(L, -1));
+			log_request(&mark, r);
 			return HTTP_INTERNAL_SERVER_ERROR;
 		}
 			
@@ -289,13 +314,24 @@ static int handler (request_rec *r) {
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
 				"Lua runtime error running '%s': %s",
 				r->filename, error_message);
-		ap_rputs("<h1>Lua Runtime Error</h1>\n", r);
-		ap_rprintf(r, "<p>Error running '%s'.</p>\n",
-				ap_escape_html(r->pool, r->filename));
-		ap_rprintf(r, "<pre>%s</pre>\n",
-				ap_escape_html(r->pool, error_message));
-		r->status = HTTP_INTERNAL_SERVER_ERROR;
-		return OK;
+		if (conf->erroroutput == MOD_LWT_ERROROUTPUT_ON) {
+			ap_rputs("<!DOCTYPE HTML>\r\n", r);
+			ap_rputs("<html>\r\n", r);
+			ap_rputs("<head><title>Lua Runtime Error</title>"
+					"</head>\r\n", r);
+			ap_rputs("<body>\r\n", r);
+			ap_rputs("<h1>Lua Runtime Error</h1>\r\n", r);
+			ap_rprintf(r, "<p>Error running '%s'.</p>\r\n",
+					ap_escape_html(r->pool, r->filename));
+			ap_rprintf(r, "<pre>%s</pre>\r\n",
+					ap_escape_html(r->pool, error_message));
+			ap_rputs("</body>\r\n", r);
+			ap_rputs("</html>\r\n", r);
+			r->status = HTTP_INTERNAL_SERVER_ERROR;
+			return OK;
+		} else {
+			return HTTP_INTERNAL_SERVER_ERROR;
+		}
 		
 	case LUA_ERRMEM:
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
