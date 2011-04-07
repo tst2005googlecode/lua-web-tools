@@ -428,23 +428,55 @@ static int add_cookie (lua_State *L) {
  */
 static int write_template (lua_State *L) {
 	const char *filename, *flags;
+	int return_output;
 	request_rec *r;
+	FILE *f;
+	char *s;
+	size_t len;
 	apr_status_t status;
 	apr_array_header_t *t;
 	const char *err;
 
 	filename = luaL_checkstring(L, 1);
 	flags = luaL_optstring(L, 2, NULL);
+	return_output = lua_isnoneornil(L, 3);
 	r = get_request_rec(L);
-	if ((status = lwt_template_parse(r, L, filename, flags, &t, &err)) !=
-			APR_SUCCESS) {
+
+	/* acquire file pointer */
+	if (return_output) {
+		f = open_memstream(&s, &len); 
+		if (!f) {
+			luaL_error(L, "Error opening memory stream");
+		}
+	} else {
+		f = *(FILE **) luaL_checkudata(L, 3, LUA_FILEHANDLE);
+	}
+
+	/* parse and render */
+	if ((status = lwt_template_parse(filename, L, flags, r->pool, &t, &err))
+			!= APR_SUCCESS) {
+		if (return_output) {
+			fclose(f);
+			free(s);
+		}
 		luaL_error(L, "Error parsing template: %s", err);
 	}
-	if ((status = lwt_template_render(r, L, t, &err)) != APR_SUCCESS) {
+	if ((status = lwt_template_render(t, L, r->pool, f, &err))
+			!= APR_SUCCESS) {
+		if (return_output) {
+			fclose(f);
+			free(s);
+		}
 		luaL_error(L, "Error rendering template: %s", err);
 	}
 
-	return 0;
+	if (return_output) {
+		fclose(f);
+		lua_pushlstring(L, s, len);
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 /*

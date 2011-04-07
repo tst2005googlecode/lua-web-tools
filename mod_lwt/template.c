@@ -14,10 +14,10 @@
  * Parser record.
  */
 typedef struct parser_rec {
-	request_rec *r;
-	lua_State *L;
 	const char *filename;
+	lua_State *L;
 	int flags;
+	apr_pool_t *pool;
 	char *buf;
 	char *begin;
 	char *pos;
@@ -31,9 +31,10 @@ typedef struct parser_rec {
  * Render record.
  */
 typedef struct render_rec {
-	request_rec *r;
-	lua_State *L;
 	apr_array_header_t *t;
+	lua_State *L;
+	apr_pool_t *pool;
+	FILE *f;
 	int errfunc;
 	apr_hash_t *templates;
 	int depth;
@@ -168,7 +169,7 @@ static apr_status_t parse_error (parser_rec *p, const char *msg) {
 		}
 	}
 
-	p->err = apr_psprintf(p->r->pool, "%s, line %d: %s", p->filename,
+	p->err = apr_psprintf(p->pool, "%s, line %d: %s", p->filename,
 			linenumber, msg);
 
 	return APR_EGENERAL;
@@ -184,8 +185,7 @@ static apr_status_t runtime_error (render_rec *d) {
 	if (error_message == NULL) {
 		error_message = "(NULL)";
 	}
-	d->err = apr_psprintf(d->r->pool, "Lua runtime error: %s",
-			error_message);
+	d->err = apr_psprintf(d->pool, "Lua runtime error: %s", error_message);
 
 	return APR_EGENERAL;
 }
@@ -271,7 +271,7 @@ static apr_status_t compile_exp (parser_rec *p, const char *exp,
 		int *index) {
 	const char *chunk;
 
-	chunk = apr_pstrcat(p->r->pool, "return ", exp, NULL);
+	chunk = apr_pstrcat(p->pool, "return ", exp, NULL);
 	switch (luaL_loadbuffer(p->L, chunk, strlen(chunk), exp)) {
 	case LUA_ERRSYNTAX:
 	case LUA_ERRMEM:
@@ -474,13 +474,13 @@ static apr_status_t process_for (parser_rec *p, const char *element,
 
 		n = (template_node_t *) apr_array_push(p->t);
 		n->type = TEMPLATE_TFOR_NEXT;
-		n->for_next_names = apr_array_make(p->r->pool, 2,
+		n->for_next_names = apr_array_make(p->pool, 2,
 				sizeof(const char *));
 		names = apr_table_get(attrs, "names");
 		if (names == NULL) {
 			return parse_error(p, "missing attribute 'names'");
 		}
-		name = apr_strtok(apr_pstrdup(p->r->pool, names), sep, &last);
+		name = apr_strtok(apr_pstrdup(p->pool, names), sep, &last);
 		while (name != NULL) {
 			*((char **) apr_array_push(n->for_next_names)) = name;	
 			name = apr_strtok(NULL, sep, &last);
@@ -522,13 +522,12 @@ static apr_status_t process_set (parser_rec *p, const char *element,
         if ((states & TEMPLATE_SOPEN) != 0) {
 		n = (template_node_t *) apr_array_push(p->t);
 		n->type = TEMPLATE_TSET;
-                n->set_names = apr_array_make(p->r->pool, 2,
-				sizeof(const char *));
+                n->set_names = apr_array_make(p->pool, 2, sizeof(const char *));
                 names = apr_table_get(attrs, "names");
                 if (names == NULL) {
                         return parse_error(p, "missing attribute 'names'");
                 }
-                name = apr_strtok(apr_pstrdup(p->r->pool, names), sep, &last);
+                name = apr_strtok(apr_pstrdup(p->pool, names), sep, &last);
                 while (name != NULL) {
                         *((char **) apr_array_push(n->set_names)) = name;
                         name = apr_strtok(NULL, sep, &last);
@@ -623,28 +622,28 @@ static apr_status_t parse_element (parser_rec *p) {
 	while (!isspace(*p->pos) && *p->pos != '>' && *p->pos != '\0') {
 		p->pos++;
 	}
-	element = apr_pstrndup(p->r->pool, p->begin, p->pos - p->begin);
+	element = apr_pstrndup(p->pool, p->begin, p->pos - p->begin);
 	while (isspace(*p->pos)) {
 		p->pos++;
 	}
-	attrs = apr_table_make(p->r->pool, 2);
+	attrs = apr_table_make(p->pool, 2);
 	while (*p->pos != '>' && *p->pos != '/' && *p->pos != '\0') {
 		p->begin = p->pos;
 		while (!isspace(*p->pos) && *p->pos != '=' && *p->pos != '\0') {
 			p->pos++;
 		}
 		if (p->pos == p->begin) {
-			return parse_error(p, apr_psprintf(p->r->pool,
+			return parse_error(p, apr_psprintf(p->pool,
 					"attribute expected following '%s'",
 					element));
 		}
-		key = apr_pstrndup(p->r->pool, p->begin, p->pos - p->begin);
+		key = apr_pstrndup(p->pool, p->begin, p->pos - p->begin);
 		unescape_xml(key);
 		while (isspace(*p->pos)) {
 			p->pos++;
 		}
 		if (*p->pos != '=') {
-			return parse_error(p, apr_psprintf(p->r->pool,
+			return parse_error(p, apr_psprintf(p->pool,
 					"'=' expected following '%s'", key));
 		}
 		p->pos++;
@@ -652,7 +651,7 @@ static apr_status_t parse_element (parser_rec *p) {
 			p->pos++;
 		}
 		if (*p->pos != '"') {
-			return parse_error(p, apr_psprintf(p->r->pool,
+			return parse_error(p, apr_psprintf(p->pool,
 					"'\"' expected following '%s'", key));
 		}
 		p->pos++;
@@ -661,10 +660,10 @@ static apr_status_t parse_element (parser_rec *p) {
 			p->pos++;
 		}
 		if (*p->pos != '"') {
-			return parse_error(p, apr_psprintf(p->r->pool,
+			return parse_error(p, apr_psprintf(p->pool,
 					"'\"' expected following '%s'", key));
 		}
-		val = apr_pstrndup(p->r->pool, p->begin, p->pos - p->begin);
+		val = apr_pstrndup(p->pool, p->begin, p->pos - p->begin);
 		unescape_xml(val);
 		p->pos++;
 		apr_table_setn(attrs, key, val);
@@ -677,7 +676,7 @@ static apr_status_t parse_element (parser_rec *p) {
 		p->pos++;
 	}
 	if (*p->pos != '>') {
-		return parse_error(p, apr_psprintf(p->r->pool,
+		return parse_error(p, apr_psprintf(p->pool,
 				"'>' expected following '%s'", element));
 	}
 	p->pos++;
@@ -685,7 +684,7 @@ static apr_status_t parse_element (parser_rec *p) {
 	ep = (element_processor) apr_hash_get(element_processors, element,
 			strlen(element));
 	if (ep == NULL) {
-		return parse_error(p, apr_psprintf(p->r->pool,
+		return parse_error(p, apr_psprintf(p->pool,
 				"unknown element '%s'", element));
 	}
 	if ((status = ep(p, element, states, attrs)) != APR_SUCCESS) {
@@ -717,7 +716,7 @@ static apr_status_t parse_sub (parser_rec *p) {
 		if (*p->pos != ']') {
 			return parse_error(p, "']' expected");
 		}
-		n->sub_flags = parse_flags(apr_pstrndup(p->r->pool, p->begin,
+		n->sub_flags = parse_flags(apr_pstrndup(p->pool, p->begin,
 				p->pos - p->begin));
 		p->pos++;
 	} else {
@@ -792,7 +791,7 @@ static apr_status_t parse_sub (parser_rec *p) {
 	if (braces > 0) {
 		return parse_error(p, "'}' expected");
 	}
-	n->sub_exp = apr_pstrndup(p->r->pool, p->begin, p->pos - p->begin - 1);
+	n->sub_exp = apr_pstrndup(p->pool, p->begin, p->pos - p->begin - 1);
 	unescape_xml(n->sub_exp);
 	if ((status = compile_exp(p, n->sub_exp, &n->sub_index))
 			!= APR_SUCCESS) {
@@ -836,33 +835,33 @@ static apr_status_t parse_template (parser_rec *p) {
 	apr_size_t size;
 
 	/* read file */
-	if ((status = apr_stat(&finfo, p->filename, APR_FINFO_SIZE, p->r->pool))
+	if ((status = apr_stat(&finfo, p->filename, APR_FINFO_SIZE, p->pool))
 			!= APR_SUCCESS) {
-		p->err = apr_psprintf(p->r->pool, "file '%s' does not exist",
+		p->err = apr_psprintf(p->pool, "file '%s' does not exist",
 				p->filename);
 		return status;
 	}
-	if ((status = apr_file_open(&file, p->filename, APR_READ, 0,
-			p->r->pool)) != APR_SUCCESS) {
-		p->err = apr_psprintf(p->r->pool, "file '%s' cannot be opened",
+	if ((status = apr_file_open(&file, p->filename, APR_READ, 0, p->pool))
+			!= APR_SUCCESS) {
+		p->err = apr_psprintf(p->pool, "file '%s' cannot be opened",
 				p->filename);
 		return status;
 	}
-	apr_pool_cleanup_register(p->r->pool, file, file_close,
+	apr_pool_cleanup_register(p->pool, file, file_close,
 			apr_pool_cleanup_null);
-	p->buf = apr_palloc(p->r->pool, finfo.size + 1);
+	p->buf = apr_palloc(p->pool, finfo.size + 1);
 	size = finfo.size;
 	if ((status = apr_file_read(file, p->buf, &size)) != APR_SUCCESS) {
-		p->err = apr_psprintf(p->r->pool, "file '%s' cannot be read",
+		p->err = apr_psprintf(p->pool, "file '%s' cannot be read",
 				p->filename);
 		return status;
 	}
 	if ((status = apr_file_close(file)) != APR_SUCCESS) {
-		p->err = apr_psprintf(p->r->pool, "file '%s' cannot be closed",
+		p->err = apr_psprintf(p->pool, "file '%s' cannot be closed",
 				p->filename);
 		return status;
 	}
-	apr_pool_cleanup_kill(p->r->pool, file, file_close);
+	apr_pool_cleanup_kill(p->pool, file, file_close);
 	p->buf[size] = '\0';
 
 	/* no parse? */
@@ -938,7 +937,7 @@ static apr_status_t render_template (render_rec *d) {
 
 	d->depth++;
 	if (d->depth > TEMPLATE_MAX_DEPTH) {
-		d->err = apr_psprintf(d->r->pool, "template depth exceeds %d",
+		d->err = apr_psprintf(d->pool, "template depth exceeds %d",
 				TEMPLATE_MAX_DEPTH);
 		return APR_EGENERAL;
 	}
@@ -1024,9 +1023,10 @@ static apr_status_t render_template (render_rec *d) {
 			d->t = (apr_array_header_t *) apr_hash_get(d->templates,
 					str, strlen(str));
 			if (d->t == NULL) {
-				if ((status = lwt_template_parse(d->r, d->L,
-						str, n->include_flags, &d->t,
-						&d->err)) != APR_SUCCESS) {
+				if ((status = lwt_template_parse(str, d->L,
+						n->include_flags, d->pool,
+						&d->t, &d->err))
+						!= APR_SUCCESS) {
 					return status;
 				}
 				apr_hash_set(d->templates, str, strlen(str),
@@ -1061,24 +1061,24 @@ static apr_status_t render_template (render_rec *d) {
 						& TEMPLATE_FSUPNIL)) {
 					str = "";
 				} else {
-					str = apr_psprintf(d->r->pool, "(%s)",
+					str = apr_psprintf(d->pool, "(%s)",
 							luaL_typename(d->L,
 							-1));
 				}
 			}
 			lua_pop(d->L, 1);
 			if (n->sub_flags & TEMPLATE_FESCURL) {
-				str = lwt_util_escape_url(d->r->pool, str);
+				str = lwt_util_escape_url(d->pool, str);
 			}
 			if (n->sub_flags & TEMPLATE_FESCXML) {
-				str = ap_escape_html(d->r->pool, str);
+				str = ap_escape_html(d->pool, str);
 			}
-			ap_rputs(str, d->r);
+			fputs(str, d->f);
 			i++;
 			break;
 
 		case TEMPLATE_TRAW:
-			ap_rwrite(n->raw_str, n->raw_len, d->r);
+			fwrite(n->raw_str, n->raw_len, 1, d->f);
 			i++;
 			break;
 		}
@@ -1097,23 +1097,23 @@ void lwt_template_init (apr_pool_t *pool) {
 	init_element_processors(pool);
 }
 
-apr_status_t lwt_template_parse (request_rec *r, lua_State *L,
-		const char *filename, const char *flags,
-		apr_array_header_t **t, const char **err) {
+apr_status_t lwt_template_parse (const char *filename, lua_State *L,
+		const char *flags, apr_pool_t *pool, apr_array_header_t **t,
+		const char **err) {
 	parser_rec *p;
 	apr_status_t status;
 
-	p = (parser_rec *) apr_pcalloc(r->pool, sizeof(parser_rec));	
-	p->r = r;
-	p->L = L;
+	p = (parser_rec *) apr_pcalloc(pool, sizeof(parser_rec));	
 	p->filename = filename;
+	p->L = L;
 	p->flags = parse_flags(flags != NULL ? flags : TEMPLATE_DEFAULT_FLAGS);
-	p->t = apr_array_make(r->pool, 32, sizeof(template_node_t));
-	p->b = apr_array_make(r->pool, 8, sizeof(block_t));	
+	p->pool = pool;
+	p->t = apr_array_make(pool, 32, sizeof(template_node_t));
+	p->b = apr_array_make(pool, 8, sizeof(block_t));	
 	status = parse_template(p);
 	if (status == APR_SUCCESS) {
 		if (!apr_is_empty_array(p->b)) {
-			status = parse_error(p, apr_psprintf(p->r->pool,
+			status = parse_error(p, apr_psprintf(p->pool,
 					"%d open elements at end of template",
 					p->b->nelts));
 		}
@@ -1132,16 +1132,17 @@ apr_status_t lwt_template_parse (request_rec *r, lua_State *L,
 	return APR_SUCCESS;
 } 
 
-apr_status_t lwt_template_render (request_rec *r, lua_State *L,
-		apr_array_header_t *t, const char **err) {
+apr_status_t lwt_template_render (apr_array_header_t *t, lua_State *L,
+		apr_pool_t *pool, FILE *f, const char **err) {
 	render_rec *d;
 	apr_status_t status;
 
-	d = (render_rec *) apr_pcalloc(r->pool, sizeof(render_rec));
-	d->r = r;
-	d->L = L;
+	d = (render_rec *) apr_pcalloc(pool, sizeof(render_rec));
 	d->t = t;
-	d->templates = apr_hash_make(r->pool);
+	d->L = L;
+	d->pool = pool;
+	d->f = f;
+	d->templates = apr_hash_make(pool);
 
 	lua_pushcfunction(d->L, lwt_util_traceback);
 	d->errfunc = lua_gettop(d->L);
@@ -1156,58 +1157,58 @@ apr_status_t lwt_template_render (request_rec *r, lua_State *L,
 	return APR_SUCCESS;
 }
 
-apr_status_t lwt_template_dump (request_rec *r, lua_State *L,
-		apr_array_header_t *t, const char **err) {
+apr_status_t lwt_template_dump (apr_array_header_t *t, lua_State *L, FILE *f,
+		const char **err) {
 	int i;
 	template_node_t *n;
 
-	ap_rputs("<ol start=\"0\">\n", r);
+	fputs("<ol start=\"0\">\r\n", f);
 	for (i = 0; i < t->nelts; i++) {
-		ap_rputs("<li>", r);
+		fputs("<li>", f);
 		n = ((template_node_t *) t->elts) + i;
 		switch (n->type) {
 		case TEMPLATE_TJUMP:
-			ap_rprintf(r, "JUMP next=%d", n->jump_next);
+			fprintf(f, "JUMP next=%d", n->jump_next);
 			break;
 
 		case TEMPLATE_TIF:
-			ap_rprintf(r, "IF cond=%s next=%d", n->if_cond,
+			fprintf(f, "IF cond=%s next=%d", n->if_cond,
 				n->if_next);
 			break;
 
 		case TEMPLATE_TFOR_INIT:
-			ap_rprintf(r, "FOR_INIT in=%s", n->for_init_in);
+			fprintf(f, "FOR_INIT in=%s", n->for_init_in);
 			break;
 
 		case TEMPLATE_TFOR_NEXT:
-			ap_rprintf(r, "FOR_NEXT names=#%d next=%d",
+			fprintf(f, "FOR_NEXT names=#%d next=%d",
 					n->for_next_names->nelts,
 					n->for_next_next);
 			break;
 
 		case TEMPLATE_TSET:
-			ap_rprintf(r, "SET names=#%d expressions=%s",
+			fprintf(f, "SET names=#%d expressions=%s",
 					n->set_names->nelts,
 					n->set_expressions);
 			break;
 
 		case TEMPLATE_TINCLUDE:
-			ap_rprintf(r, "INCLUDE filename=%s flags=%s",
+			fprintf(f, "INCLUDE filename=%s flags=%s",
 					n->include_filename, n->include_flags);
 			break;
 
 		case TEMPLATE_TSUB:
-			ap_rprintf(r, "SUB exp=%s flags=%d", n->sub_exp,
+			fprintf(f, "SUB exp=%s flags=%d", n->sub_exp,
 					n->sub_flags);
 			break;
 
 		case TEMPLATE_TRAW:
-			ap_rprintf(r, "RAW len=%d", n->raw_len);
+			fprintf(f, "RAW len=%d", n->raw_len);
 			break;
 		}
-		ap_rputs("</li>\n", r);
+		fputs("</li>\r\n", f);
 	}
-	ap_rputs("</ol>\n", r);
+	fputs("</ol>\r\n", f);
 		
 	return APR_SUCCESS;
 }

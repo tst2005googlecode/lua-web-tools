@@ -3,15 +3,21 @@
 module(..., package.seeall)
 
 -- Imported functions from core
+gpairs = pairs
 pairs = httpd.core.pairs
 set_content_type = httpd.core.set_content_type
 add_cookie = httpd.core.add_cookie
-write_template = httpd.core.write_template
 escape_xml = httpd.core.escape_xml
 escape_url = httpd.core.escape_url
 input = httpd.core.input
 output = httpd.core.output
 
+-- Write template
+function write_template (filename, flags, file)
+	return httpd.core.write_template(filename, flags, not file and output
+			or file ~= true and file or nil)
+end
+	
 -- Read
 function read (...)
 	return input:read(...)
@@ -41,6 +47,15 @@ function dump (v, visited)
         -- Dump values by type
         if type(v) == "table" then
                 visited[v] = true
+                write("<table><tablebody>\r\n")
+                for name, value in gpairs(v) do
+                        write("<tr><td>", escape_html(name), "</td><td>")
+                        dump(value, visited)
+                        write("<td></tr>\r\n")
+                end
+                write("</tablebody></table>\r\n")
+	elseif type(v) == "userdata" and string.sub(tostring(v), 1, 10)
+			== "APR table " then
                 write("<table><tablebody>\r\n")
                 for name, value in pairs(v) do
                         write("<tr><td>", escape_html(name), "</td><td>")
