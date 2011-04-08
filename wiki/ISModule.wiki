@@ -33,4 +33,16 @@ require "is.sqlite3"
 
 == `is.connect (table)` ==
 
-Creates and returns a connection to an information system using the arguments from `table`. `table` must contain a field `driver` that determines to type of information system to connect to. Other required fields depend on the driver and are documented in the respective sections. The function return a connection.
+Creates and returns a connection to an information system using the arguments from `table`. `table` must contain a field `driver` that determines to type of information system to connect to. Other required fields depend on the driver and are documented in the respective sections. The function returns a connection if it is successful and raises an error otherwise.
+
+== `connection:close()` ==
+
+Explicitly closes the connection. Connections are closed implcitly when they are garbage collected.
+
+== `connection:execute(sql, ...)` ==
+
+Prepares the supplied SQL statement which may contain binding variables represented by `?`, and then binds the values following the SQL statement. If the SQL statement modifies rows (`INSERT`, `DELETE`, `UPDATE`), the function returns the number of rows affected; if the SQL statement returns data from the information system, the function returns no value.
+
+== `connection:read([read_mode])` ==
+
+Reads the next row from an executed SQL statement returning data and returns the next row as a table, or `nil` if there are no more rows. If `read_mode` is absent or `name`, the tables keys are column names; if `read_mode` is `index`, the table keys are column numbers (1-based). 
