@@ -60,7 +60,6 @@ require "is"
 require "is.mysql"
 }}}
 
-
 == TDS ==
 
 {{{
@@ -77,10 +76,6 @@ require "is.sqlite3"
 
 The functions described in this section are common to all information systems.
 
-== `is.connect (table)` ==
-
-Creates and returns a connection to an information system using the connection arguments supplied in `table`. `table` must contain a field `driver` that determines the type of information system to connect to. Other required fields depend on the driver and are documented in the respective sections below. The function returns a connection if it is successful, and raises an error otherwise.
-
 == `is.trim (s)` ==
 
 Removes leading and trailing whitespace from `s`, and returns the trimmed string; returns `nil` if `s` is `nil`.
@@ -95,7 +90,11 @@ Returns a Unix timestamp corresponding the string `date` in the `YYYY-MM-DD HH:M
 
 == `is.date_time (date)` ==
 
-Returns a Unix timestamp representing the string `date` in the `YYYY-MM-DD` format; returns `nil` is `date` is `nil`.
+Returns a Unix timestamp representing the string `date` in the `YYYY-MM-DD` format; returns `nil` if `date` is `nil`.
+
+== `is.connect (table)` ==
+
+Creates and returns a connection to an information system using the connection arguments supplied in `table`. `table` must contain a field `driver` that determines the type of information system to connect to. Other required fields depend on the driver and are documented in the respective sections below. The function returns a connection if it is successful, and raises an error otherwise.
 
 == `connection:close ()` ==
 
