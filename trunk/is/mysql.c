@@ -133,29 +133,6 @@ static int connect (lua_State *L) {
 }
 
 /*
- * Returns a bitstring from a number.
- */
-static int bitstring (lua_State *L) {
-	uint32_t bits;
-	size_t len, pos;
-	char bitstring[4];
-
-	bits = (uint32_t) luaL_checknumber(L, 1);
-	len = 0;
-	pos = 4;
-	do {
-		bitstring[--pos] = bits & 0xff;
-		bits >>= 8;
-		if (bitstring[pos] != 0) {
-			len = 4 - pos;
-		}
-	} while (pos > 0);
-
-	lua_pushlstring(L, &bitstring[4 - len], len);
-	return 1;
-}
-
-/*
  * Closes s MySQL connection.
  */
 static int close (lua_State *L) {
@@ -879,7 +856,6 @@ static int tostring (lua_State *L) {
  */
 static const luaL_Reg functions[] = {
 	{ IS_FCONNECT, connect },
-	{ "bitstring", bitstring },
 	{ NULL, NULL }
 };
 
