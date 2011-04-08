@@ -607,7 +607,7 @@ static int tostring (lua_State *L) {
  * Module functions.
  */
 static const luaL_Reg functions[] = {
-	{ "connect", connect },
+	{ IS_FCONNECT, connect },
 	{ NULL, NULL }
 };
 

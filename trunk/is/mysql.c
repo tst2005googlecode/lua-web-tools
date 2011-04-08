@@ -7,6 +7,7 @@
 #ifdef _REENTRANT
 #include <pthread.h>
 #endif
+#include <stdint.h>
 #include <mysql.h>
 #include <lua.h>
 #include <lauxlib.h>
@@ -128,6 +129,29 @@ static int connect (lua_State *L) {
 	luaL_getmetatable(L, IS_MYSQL_METATABLE);
 	lua_setmetatable(L, -2);
 
+	return 1;
+}
+
+/*
+ * Returns a bitstring from a number.
+ */
+static int bitstring (lua_State *L) {
+	uint32_t bits;
+	size_t len, pos;
+	char bitstring[4];
+
+	bits = (uint32_t) luaL_checknumber(L, 1);
+	len = 0;
+	pos = 4;
+	do {
+		bitstring[--pos] = bits & 0xff;
+		bits >>= 8;
+		if (bitstring[pos] != 0) {
+			len = 4 - pos;
+		}
+	} while (pos > 0);
+
+	lua_pushlstring(L, &bitstring[4 - len], len);
 	return 1;
 }
 
@@ -348,7 +372,7 @@ void read_string (lua_State *L, mysql_rec *m, int i) {
  */
 void read_bit (lua_State *L, mysql_rec *m, int i) {
 	unsigned char *bits;
-	unsigned long long bit_value;
+	uint32_t bit_value;
 	int j;
 
 	bits = (unsigned char *) &m->doubles[i];
@@ -854,7 +878,8 @@ static int tostring (lua_State *L) {
  * Module functions.
  */
 static const luaL_Reg functions[] = {
-	{ "connect", connect },
+	{ IS_FCONNECT, connect },
+	{ "bitstring", bitstring },
 	{ NULL, NULL }
 };
 

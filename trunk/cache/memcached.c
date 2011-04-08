@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/types.h>
+#include <stdint.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/tcp.h>
