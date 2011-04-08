@@ -1,8 +1,48 @@
-#summary IS module API
+#summary IS module description
+
+<wiki:toc max_depth="2" />
 
 = Introduction =
 
 This page describes the functions provided by the IS module. This IS module supports the access to information systems.
+
+== Example ==
+
+{{{
+-- Import
+require "is"
+require "is.mysql"
+
+-- Define database
+DB = {
+    driver = is.mysql,
+    user = "me",
+    password = "secret",
+    database = "mydatabase",
+    charset = "utf8"
+}
+
+-- Connect
+conn = is.connect(DB)
+
+-- Create table
+conn:execute("CREATE TABLE IF NOT EXISTS DUMMY (I INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, V INTEGER NOT NULL)")
+
+-- Insert rows
+for i = 1, 10 do
+    conn:execute("INSERT INTO DUMMY (V) VALUES (?)", i)
+end
+
+-- Read
+conn:execute("SELECT * FROM DUMMY WHERE V > ?", 5)
+sum = 0
+for row in conn:rows() do
+    sum = sum + row.V
+end
+conn:execute("SELECT COUNT(*) FROM DUMMY WHERE V > ?", 5)
+row = conn:read("index")
+cnt = row[1]
+}}}
 
 = Import =
 
