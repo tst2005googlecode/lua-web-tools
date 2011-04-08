@@ -1,0 +1,36 @@
+#summary IS module API
+
+= Introduction =
+
+This page describes the functions provided by the IS module. This IS module supports the access to information systems.
+
+= Import =
+
+{{{
+require "is"
+}}}
+
+== MySQL ==
+
+{{{
+require "is.mysql"
+}}}
+
+
+== TDS (Sybase, SQL Server) ==
+
+{{{
+require "is.tds"
+}}}
+
+== SQLite3 ==
+
+{{{
+require "is.sqlite3"
+}}}
+
+= Functions =
+
+== `is.connect (table)` ==
+
+Creates and returns a connection to an information system using the arguments from `table`. `table` must contain a field `driver` that determines to type of information system to connect to. Other required fields depend on the driver and are documented in the respective sections. The function return a connection.
