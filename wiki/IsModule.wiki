@@ -81,6 +81,22 @@ The functions described in this section are common to all information systems.
 
 Creates and returns a connection to an information system using the connection arguments supplied in `table`. `table` must contain a field `driver` that determines the type of information system to connect to. Other required fields depend on the driver and are documented in the respective sections below. The function returns a connection if it is successful, and raises an error otherwise.
 
+== `is.trim (s)` ==
+
+Removes leading and trailing whitespace from `s`, and returns the trimmed string; returns `nil` if `s` is `nil`.
+
+== `is.date (time)` ==
+
+Returns a string in the `YYYY-MM-DD HH:MM:SS` format using UTC corresponding to the Unix timestamp `time`; returns `nil` if `time` is `nil`.
+
+== `is.time (date)` ==
+
+Returns a Unix timestamp corresponding the string `date` in the `YYYY-MM-DD HH:MM:SS` format using UTC; returns `nil` if `date` is `nil`.
+
+== `is.date_time (date)` ==
+
+Returns a Unix timestamp representing the string `date` in the `YYYY-MM-DD` format; returns `nil` is `date` is `nil`.
+
 == `connection:close ()` ==
 
 Explicitly closes the connection. Connections are closed implcitly when they are garbage collected.
