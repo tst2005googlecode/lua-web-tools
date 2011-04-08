@@ -31,9 +31,11 @@ require "is.sqlite3"
 
 = Functions =
 
+The functions described in this section are common to all information systems.
+
 == `is.connect (table)` ==
 
-Creates and returns a connection to an information system using the arguments from `table`. `table` must contain a field `driver` that determines to type of information system to connect to. Other required fields depend on the driver and are documented in the respective sections. The function returns a connection if it is successful and raises an error otherwise.
+Creates and returns a connection to an information system using the arguments from `table`. `table` must contain a field `driver` that determines to type of information system to connect to. Other required fields depend on the driver and are documented in the respective sections below. The function returns a connection if it is successful and raises an error otherwise.
 
 == `connection:close()` ==
 
@@ -41,11 +43,11 @@ Explicitly closes the connection. Connections are closed implcitly when they are
 
 == `connection:execute(sql, ...)` ==
 
-Prepares the supplied SQL statement which may contain binding variables represented by `?`, and then binds the values following the SQL statement. If the SQL statement modifies rows (`INSERT`, `DELETE`, `UPDATE`), the function returns the number of rows affected; if the SQL statement returns data from the information system, the function returns no value.
+Prepares the supplied SQL statement which may contain binding variables represented by `?`, and then binds the values following the SQL statement to these variables. If the SQL statement modifies rows (such as `INSERT`, `DELETE`, `UPDATE`), the function returns the number of rows affected; if the SQL statement produces rows (such as `SELECT`), the function returns no value.
 
 == `connection:read([read_mode])` ==
 
-Reads the next row produced by a the previously executed SQL statement and returns that row as a table, or `nil` if there are no more rows. If `read_mode` is absent or `name`, the tables keys are column names; if `read_mode` is `index`, the table keys are column numbers (1-based). 
+Reads the next row produced by a the previously executed SQL statement and returns that row as a table, or `nil` if there are no more rows. If `read_mode` is absent or `name`, the table keys are column names; if `read_mode` is `index`, the table keys are column numbers (1-based). 
 
 == `connection:rows([read_mode])` ==
 
@@ -55,18 +57,18 @@ Returns three values such that the production
 for row in connection:rows([read_mode]) do body end
 }}}
 
-iterates over all rows produced by a previously executed SQL statement. `read_mode` has the effect as in `connection:read()`.
+iterates over all rows produced by a previously executed SQL statement. The `read_mode` parameter has the same meaning as in `connection:read()`.
 
 == `connection:metadata(meta_data)` ===
 
 Returns meta data from a previously executed SQL statement that produces rows. The function returns a table where keys are column numbers (1-based) and values depend on `meta_data` as follows:
 
 || *`meta_data`* || *Description* ||
-||`name`||Column name||
-||`type`||Column data type expressed in the type system of the information system||
-||`length`||Column length or size||
-||`scale`||Column scale||
-||`luatype`||Mapped Lua type, such as `string`, `number`, or `boolean`||
+|| `name` || column name||
+|| `type` || column data type expressed in the type system of the information system ||
+|| `length` || column length or size ||
+|| `scale` || column scale ||
+|| `luatype` || mapped Lua type, such as `string`, `number`, or `boolean` ||
 
 The function must not be invoked after `connection:read()` or the iterator function returned by `conection:rows()` have returned `nil`.
 
@@ -87,6 +89,13 @@ Commits an open transaction on the connection. The function raises an error if t
 Rolls back an open transaction on the connection. The function raises an error if there is no open transaction.
 
 = MySQL Specific Functions =
+
+== Type Mapping ==
+
+Please note the following type mapping that is specific to MySQL:
+
+  * `bit(1)` is mapped to and from `boolean`
+  * `bit(n)` is mapped to and from a number suitable for Lua bit libraries (1 < `n` <= 32)
 
 == Connection Arguments ==
 
@@ -112,6 +121,13 @@ Executes an SQL statement without preparing it first. This function must be used
 
 = TDS Specific Functions =
 
+== Type Mapping ==
+
+Please note the following type mapping that is specific to TDS:
+
+  * `bit` is mapped to and from `boolean`
+  * `date`, `time`, `datetime` and `smalldatetime` are mapped to the `YYYY-MM-DD HH:MM:SS` format
+
 == Connection Arguments ==
 
 The TDS driver supports the following connection arguments:
@@ -128,9 +144,13 @@ The TDS driver supports the following connection arguments:
 
 == `tds_connection:messages()` ==
 
-Returns the messages produced by the last function called on the connection as a table with number indexes.
+Returns a table value with number indexes containing the messages returned by the server for the last function called on the connection.
 
 = SQLite3 Specific Functions =
+
+== Type Mapping ==
+
+SQLite 3 uses a [http://www.sqlite.org/datatype3.html dynamic type system] with type affinity. The dynamic type of values may be different from the static type returned by `connection:metadata()`.
 
 == Connection Arguments ==
 
