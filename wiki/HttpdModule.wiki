@@ -36,7 +36,7 @@ Writes a template from a file referenced by `filename`. `flags` is a string with
 
   * `p`: parses the template; if absent, the template is written as is
   * `x`: escapes XML reserved characters in substitutions
-  * `u`: escapes URL reserved characters in substitutions
+  * `u`: escapes URI reserved characters in substitutions
   * `n`: writes an empty string for `nil` values in substitution expressions
   * `e`: writes an empty string for substitution expressions with a runtime error; if absent, a runtime error is propagated to the caller
 
@@ -64,9 +64,9 @@ Escapes XML reserved characters in a string and returns the escaped string. More
 || `<` || `&lt;` ||
 || `>` || `&gt;` ||
 
-== `httpd.escape_url (string)` == 
+== `httpd.escape_uri (string)` == 
 
-Escapes URL reserved characters in a string and returns the escaped string. More specifically, alphanumeric characters, `-`, `.`, `_`, and `~` are considered unreserved characters, and all other characters are considered reserved characters according to RFC 3986. Reserved characters are escaped by a percent sign followed by two hexadecimal (uppercase) digits representing the value of the escaped character.
+Escapes URI reserved characters in a string and returns the escaped string. More specifically, alphanumeric characters, `-`, `.`, `_`, and `~` are considered unreserved characters, and all other characters are considered reserved characters according to RFC 3986. Reserved characters are escaped by a percent sign followed by two hexadecimal (uppercase) digits representing the value of the escaped character.
 
 == `httpd.input` ==
 
