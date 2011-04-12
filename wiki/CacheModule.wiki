@@ -75,15 +75,25 @@ Queries the cache for the value associated with the specified string key, and re
 
 == `connector:set (key, value [, timeout])` ==
 
-Stores `value` associated with the specified string key in the cache, and returns `true`. If `value` is `nil`, the function unconditionally deletes the value currently associated with `key`, and returns `true` if a value was deleted, and `false` otherwise. If `timeout` is specified, it is a number value that specifies the number of seconds the association remains in the cache; however there is no guarantee that the associated value will not be evicted beforehand.
+Stores `value` associated with the specified string key in the cache, and returns `true`. If `value` is `nil`, the function unconditionally deletes the value associated with `key`, and returns `true` if a value was deleted, and `false` otherwise. If `timeout` is specified, it is a number value that specifies the number of seconds the association remains in the cache; however there is no guarantee that the association will not be evicted beforehand.
 
 == `connector:add (key, value [, timeout])` ==
 
-Stores `value` associated with the specified string key in the cache, and returns `true` unless there already is a value associated with `key` in which case the function does nothing and returns `false`. The `nil` value and `timeout` behaviour are the same as in `connector:set`.
+Stores `value` associated with the specified string key in the cache and returns `true` unless there already is a value associated with `key`, in which case the function does nothing and returns `false`. The `nil` value and `timeout` behaviour are the same as in `connector:set`.
 
 == `connector:replace (key, value [, timeout])` ==
 
-Stores `value` associated with the specified string key in the cache and returns `true`unless there is no value associated with `key` in which case the function does nothing and returns `false`. The `nil` value and `timeout` behaviour are the same as in `connector:set`.
+Stores `value` associated with the specified string key in the cache and returns `true` unless there is no value associated with `key`, in which case the function does nothing and returns `false`. The `nil` value and `timeout` behaviour are the same as in `connector:set`.
+
+== `connector:inc (key [, delta [, initial [, timeout]]])` ==
+
+Increments the counter associated with the specified string key in the cache. `delta` is an integer value that specifies the value the counter is incremented by; if absent, it defaults to `1`. `initial` is an integer value that specifies the resulting value of the counter if the association does not yet exist in the cache; if absent, it defaults to `1`. `timeout` behaves in the same way as in `connector:set`. The function returns the resulting value of the counter.
+
+Use `connector:inc(key, 0)` to query the value of a counter, as counters are different from regular encoded Lua values and hence cannot be queried using `connector:get`.
+
+== `connector:dec (key [, delta [, initial [, timeout]]])` ==
+
+Decrements the counter associated with the specified string key in the cache. `delta` is an integer value that specifies the value the counter is decremented by; if absent, it defaults to `1`. `initial` is an integer value that specifies the resulting value of the counter if the association does not yet exist in the cache; if absent, it defaults to `1`. `timeout` behaves in the same way as in the `connector:set`. The function returns the resulting value of the counter.
 
 = memcached Specific Functions =
 
