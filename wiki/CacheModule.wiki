@@ -108,7 +108,7 @@ memcached applies the following specific timeout behavior:
 
 == Connection Arguments ==
 
-The memcached driver supports the following connection arguments:
+The memcached driver supports the following configuration arguments:
 
 || *Field* || *Optional* || *Description* ||
 || `driver` || no || must be `cache.memcached` ||
