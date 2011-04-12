@@ -9,13 +9,13 @@
 #include <lua.h>
 
 /**
- * Escapes an URL.
+ * Escapes an URI.
  *
  * @param pool the memory pool
- * @param s the URL to escape
- * @return the escaped URL
+ * @param s the URI to escape
+ * @return the escaped URI
  */
-const char *lwt_util_escape_url(apr_pool_t *pool, const char *s);
+const char *lwt_util_escape_uri(apr_pool_t *pool, const char *s);
 
 /**
  * Lua function providing stack traceback.

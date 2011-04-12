@@ -1068,7 +1068,7 @@ static apr_status_t render_template (render_rec *d) {
 			}
 			lua_pop(d->L, 1);
 			if (n->sub_flags & TEMPLATE_FESCURL) {
-				str = lwt_util_escape_url(d->pool, str);
+				str = lwt_util_escape_uri(d->pool, str);
 			}
 			if (n->sub_flags & TEMPLATE_FESCXML) {
 				str = ap_escape_html(d->pool, str);

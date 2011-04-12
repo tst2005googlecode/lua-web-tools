@@ -495,16 +495,16 @@ static int escape_xml (lua_State *L) {
 }
 
 /*
- * Escapes URL reserved and unsafe characters in a string.
+ * Escapes URI reserved and unsafe characters in a string.
  */
-static int escape_url (lua_State *L) {
+static int escape_uri (lua_State *L) {
 	const char *s;
 	request_rec *r;
 	
 	s = luaL_checkstring(L, 1);
 	r = get_request_rec(L);
 
-	lua_pushstring(L, lwt_util_escape_url(r->pool, s));
+	lua_pushstring(L, lwt_util_escape_uri(r->pool, s));
 
 	return 1;
 }
@@ -518,7 +518,7 @@ static const luaL_Reg functions[] = {
 	{ "add_cookie", add_cookie },
 	{ "write_template", write_template },
 	{ "escape_xml", escape_xml },
-	{ "escape_url", escape_url },
+	{ "escape_uri", escape_uri },
 	{ NULL, NULL }
 };
 
