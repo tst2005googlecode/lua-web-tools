@@ -73,21 +73,21 @@ Queries the cache for the value associated with the specified string key, and re
 
 == `connector:set (key, value [, timeout])` ==
 
-Stores `value` associated with the specified string key in the cache, and returns `true`. If `value` is `nil`, the function unconditionally deletes the value associated with `key`, and returns `true` if a value was deleted, and `false` otherwise. If `timeout` is specified, it is a number value that specifies the number of seconds the association remains in the cache; however there is no guarantee that the association will not be evicted beforehand.
+Stores `value` associated with the specified string key in the cache, and returns `true`. If `value` is `nil`, the function unconditionally deletes the value associated with `key`, and returns `true` if a value was deleted, and `false` otherwise. If `timeout` is specified, it is an integer value that specifies the number of seconds the association remains in the cache; however there is no guarantee that the association will not be evicted beforehand.
 
 == `connector:add (key, value [, timeout])` ==
 
-Stores `value` associated with the specified string key in the cache and returns `true` unless there already is a value associated with `key`, in which case the function does nothing and returns `false`. The `nil` value and `timeout` behaviour are the same as in `connector:set`.
+Stores `value` associated with the specified string key in the cache and returns `true` unless there already is a value associated with `key`, in which case the function does nothing and returns `false`. A `nil` value and `timeout` behave in the same way as in `connector:set`.
 
 == `connector:replace (key, value [, timeout])` ==
 
-Stores `value` associated with the specified string key in the cache and returns `true` unless there is no value associated with `key`, in which case the function does nothing and returns `false`. The `nil` value and `timeout` behaviour are the same as in `connector:set`.
+Stores `value` associated with the specified string key in the cache and returns `true` unless there is no value associated with `key`, in which case the function does nothing and returns `false`. A `nil` value and `timeout` behave in the same way as in `connector:set`.
 
 == `connector:inc (key [, delta [, initial [, timeout]]])` ==
 
 Increments the counter associated with the specified string key in the cache. `delta` is an integer value that specifies the value the counter is incremented by; if absent, it defaults to `1`. `initial` is an integer value that specifies the resulting value of the counter if the association does not yet exist in the cache; if absent, it defaults to `1`. `timeout` behaves in the same way as in `connector:set`. The function returns the resulting value of the counter.
 
-Use `connector:inc(key, 0)` to query the value of a counter, as counters are different from regular encoded Lua values and hence cannot be queried using `connector:get`.
+Use `connector:inc(key, 0)` to query the value of a counter, as counters are different from regularly encoded Lua values and hence cannot be queried using `connector:get`.
 
 == `connector:dec (key [, delta [, initial [, timeout]]])` ==
 
@@ -101,21 +101,21 @@ Flushes _all associations_ from the cache instance associated with the specified
 
 == Timeout Behaviour ==
 
-memcached applies the following specific timeout behaviour
+memcached applies the following specific timeout behavior:
 
   * if timeout is `0`, the association does not expire
   * if timeout is larger than `30 * 24 * 60 * 60` (i.e. 30 days), the value is interpreted as an absolute Unix domain timestamp rather than a relative number of seconds
 
 == Connection Arguments ==
 
-The MySQL driver supports the following connection arguments:
+The memcached driver supports the following connection arguments:
 
 || *Field* || *Optional* || *Description* ||
 || `driver` || no || must be `cache.memcached` ||
-|| `map` || yes || a function receiving a string key and returning two string values specifying the host and port  ||
+|| `map` || yes || a function receiving a string key and returning two string values specifying the host and port of the cache instance that manages the key; if absent, the cache module provides a default function that maps all keys to `localhost`, `11211`, i.e. a cache instance running on the local machine and listening on the default port ||
 || `encode` || yes || a function receiving a Lua value and returning a string serialization of that value; if absent, the cache module provides a default encoder for `boolean`, `number`, `string` and `table` with support for recursive table structures, and favoring decoding performance over encoding performance ||
-|| `decode` || yes || a function receiving a string serialization and returning the Lua value of that serialization; if absent, the cache module provides a decoder corresponding to the default encoder ||
+|| `decode` || yes || a function receiving a string serialization and returning the Lua value of that serialization; if absent, the cache module provides a default decoder corresponding to the default encoder ||
 
 == `memcached_connector:stat (key [, type])` ==
 
-Returns a table with statistics from the cache instance associated with the specified string key. If `type` is ommitted, the function returns general-purpose statistics; if `type` is one of `items`, `sizes`, or `slabs` the function returns the requested type of statistics.
+Returns a table with statistics from the cache instance associated with the specified string key. If `type` is ommitted, the function returns general-purpose statistics; if `type` is one of `items`, `sizes`, or `slabs`, the function returns the requested specific statistics.
