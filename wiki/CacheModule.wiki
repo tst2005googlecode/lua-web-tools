@@ -1,0 +1,82 @@
+#summary Cache module description
+
+<wiki:toc max_depth="2" />
+
+= Introduction =
+
+This page describes the functions provided by the cache module. The cache module supports the access to caches. More specifically, the following cache is currently supported:
+
+  * memcached
+
+== Example ==
+
+{{{
+-- Import
+require "cache"
+require "cache.memcached"
+
+-- Configure cache
+CACHE = cache.configure({ driver = cache.memcached })
+
+-- Set some values
+CACHE:set("a_boolean", true)
+CACHE:set("a_number", 1.0)
+CACHE:set("a_string", "abc", 3600) -- expires in one hour
+CACHE:set("a_table", { a = 1, b = 2, c = 3 }, 3600)
+
+-- Get some values
+CACHE:get("a_boolean")
+CACHE:get("a_number")
+CACHE:get("a_string")
+CACHE:get("a_table")
+
+-- Clear
+CACHE:set("a_boolean", nil)
+
+-- Add new
+CACHE:add("a_boolean", false, 3600)
+
+-- Replace existing
+CACHE:replace("a_number", 2.0, 3600)
+
+-- Counters
+value = CACHE:inc("a_counter", 1, 1, 3600)
+}}}
+
+
+
+= Import =
+
+{{{
+require "cache"
+}}}
+
+== memcached ==
+
+{{{
+require "cache.memecached"
+}}}
+
+= Functions =
+
+The functions described in this section are common to all caches.
+
+== `cache.configure (table)` ==
+
+Creates and returns a connector to a cache using the configuration arguments supplied in `table`. `table` must contain a field `driver` that determines the type of cache to connect to. Other required fields depend on the driver and are documented in the respective sections below. The function returns a connector if it is successful, and raises an error otherwise.
+
+== `connector:close ()` ==
+
+Explicitly closes the connector. Connectors are closed implicitly when they are garbage collected.
+
+= memcached Specific Functions =
+
+== Connection Arguments ==
+
+The MySQL driver supports the following connection arguments:
+
+|| *Field* || *Optional* || *Description* ||
+|| `driver` || no || must be `cache.memcached` ||
+|| `map` || yes || ||
+|| `encode` || yes || ||
+|| `decode` || yes || ||
