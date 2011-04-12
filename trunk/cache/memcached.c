@@ -58,7 +58,7 @@ static int map (lua_State *L) {
 }
 
 /*
- * Configures a memcached cache.
+ * Configures a memcached connector.
  */
 static int configure (lua_State *L) {
 	memcached_rec *m;

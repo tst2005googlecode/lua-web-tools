@@ -18,7 +18,6 @@
 #define CACHE_FSET "set"
 #define CACHE_FADD "add"
 #define CACHE_FREPLACE "replace"
-#define CACHE_FDELETE "delete"
 #define CACHE_FINC "inc"
 #define CACHE_FDEC "dec"
 #define CACHE_FFLUSH "flush"
