@@ -97,7 +97,7 @@ Decrements the counter associated with the specified string key in the cache. `d
 
 Flushes _all associations_ from the cache instance associated with the specified string key.
 
-= memcached Specific Functions =
+= memcached Specifics =
 
 == Timeout Behaviour ==
 
