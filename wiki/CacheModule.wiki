@@ -43,8 +43,6 @@ CACHE:replace("a_number", 2.0, 3600)
 value = CACHE:inc("a_counter", 1, 1, 3600)
 }}}
 
-
-
 = Import =
 
 {{{
@@ -95,7 +93,18 @@ Use `connector:inc(key, 0)` to query the value of a counter, as counters are dif
 
 Decrements the counter associated with the specified string key in the cache. `delta` is an integer value that specifies the value the counter is decremented by; if absent, it defaults to `1`. `initial` is an integer value that specifies the resulting value of the counter if the association does not yet exist in the cache; if absent, it defaults to `1`. `timeout` behaves in the same way as in the `connector:set`. The function returns the resulting value of the counter.
 
+== `connector:flush (key)` ==
+
+Flushes _all associations_ from the cache instance associated with the specified string key.
+
 = memcached Specific Functions =
+
+== Timeout Behaviour ==
+
+memcached applies the following specific timeout behaviour
+
+  * if timeout is `0`, the association does not expire
+  * if timeout is larger than `30 * 24 * 60 * 60` (i.e. 30 days), the value is interpreted as an absolute Unix domain timestamp rather than a relative number of seconds
 
 == Connection Arguments ==
 
@@ -103,6 +112,10 @@ The MySQL driver supports the following connection arguments:
 
 || *Field* || *Optional* || *Description* ||
 || `driver` || no || must be `cache.memcached` ||
-|| `map` || yes || ||
-|| `encode` || yes || ||
-|| `decode` || yes || ||
+|| `map` || yes || a function receiving a string key and returning two string values specifying the host and port  ||
+|| `encode` || yes || a function receiving a Lua value and returning a string serialization of that value; if absent, the cache module provides a default encoder for `boolean`, `number`, `string` and `table` with support for recursive table structures, and favoring decoding performance over encoding performance ||
+|| `decode` || yes || a function receiving a string serialization and returning the Lua value of that serialization; if absent, the cache module provides a decoder corresponding to the default encoder ||
+
+== `memcached_connector:stat (key [, type])` ==
+
+Returns a table with statistics from the cache instance associated with the specified string key. If `type` is ommitted, the function returns general-purpose statistics; if `type` is one of `items`, `sizes`, or `slabs` the function returns the requested type of statistics.
