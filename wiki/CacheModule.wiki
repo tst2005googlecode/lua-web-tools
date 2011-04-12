@@ -103,10 +103,10 @@ Flushes _all associations_ from the cache instance associated with the specified
 
 memcached applies the following specific timeout behavior:
 
-  * if timeout is `0`, the association does not expire
+  * if timeout is `0`, the association does not expire, i.e. the behavior is the same as if value had been omitted
   * if timeout is larger than `30 * 24 * 60 * 60` (i.e. 30 days), the value is interpreted as an absolute Unix domain timestamp rather than a relative number of seconds
 
-== Connection Arguments ==
+== Configuration Arguments ==
 
 The memcached driver supports the following configuration arguments:
 
@@ -118,4 +118,4 @@ The memcached driver supports the following configuration arguments:
 
 == `memcached_connector:stat (key [, type])` ==
 
-Returns a table with statistics from the cache instance associated with the specified string key. If `type` is ommitted, the function returns general-purpose statistics; if `type` is one of `items`, `sizes`, or `slabs`, the function returns the requested specific statistics.
+Returns a table with statistics from the cache instance associated with the specified string key. If `type` is omitted, the function returns general-purpose statistics; if `type` is one of `items`, `sizes`, or `slabs`, the function returns the requested specific statistics.
