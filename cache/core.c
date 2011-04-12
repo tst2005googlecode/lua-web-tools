@@ -238,7 +238,7 @@ static void decode (lua_State *L, buf_rec *B) {
 		nrec = be32toh(nrec);
 
 		/* sanity check */
-		avail(L, B, 2 * (narr * nrec));
+		avail(L, B, 2 * (narr + nrec));
 		lua_createtable(L, narr, nrec);
 
 		/* store the table for backreferences */
@@ -261,7 +261,7 @@ static void decode (lua_State *L, buf_rec *B) {
 		u = be32toh(nu);
 		lua_rawgeti(L, B->table_index, (int) u);
 		if (lua_isnil(L, -1)) {
-			luaL_error(L, "decoding error: bad backrerference");
+			luaL_error(L, "decoding error: bad backreference");
 		}
 		break;
 
