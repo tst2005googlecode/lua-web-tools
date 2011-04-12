@@ -10,16 +10,16 @@
 #include "util.h"
 
 /*
- * Hexadecimal digits for URLs.
+ * Hexadecimal digits for URIs.
  */
-static const char url_hexdigits[] = { '0', '1', '2', '3', '4', '5', '6', '7',
+static const char uri_hexdigits[] = { '0', '1', '2', '3', '4', '5', '6', '7',
 		'8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
 /*
  * Exported functions.
  */
 
-const char *lwt_util_escape_url (apr_pool_t *pool, const char *s) {
+const char *lwt_util_escape_uri (apr_pool_t *pool, const char *s) {
 	size_t cnt, esc_cnt, ps, pn;
 	char *n;
 	
@@ -45,8 +45,8 @@ const char *lwt_util_escape_url (apr_pool_t *pool, const char *s) {
 			n[pn++] = s[ps];
 		} else {
 			n[pn++] = '%';
-			n[pn++] = url_hexdigits[((unsigned char) s[ps]) / 16]; 
-			n[pn++] = url_hexdigits[((unsigned char) s[ps]) % 16];
+			n[pn++] = uri_hexdigits[((unsigned char) s[ps]) / 16]; 
+			n[pn++] = uri_hexdigits[((unsigned char) s[ps]) % 16];
 		}
 	}
 	n[pn] = '\0';

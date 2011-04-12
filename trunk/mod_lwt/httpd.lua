@@ -8,7 +8,7 @@ pairs = httpd.core.pairs
 set_content_type = httpd.core.set_content_type
 add_cookie = httpd.core.add_cookie
 escape_xml = httpd.core.escape_xml
-escape_url = httpd.core.escape_url
+escape_uri = httpd.core.escape_uri
 input = httpd.core.input
 output = httpd.core.output
 
