@@ -69,6 +69,22 @@ Creates and returns a connector to a cache using the configuration arguments sup
 
 Explicitly closes the connector. Connectors are closed implicitly when they are garbage collected.
 
+== `connector:get (key)` ==
+
+Queries the cache for the value associated with the specified string key, and returns the value stored in the cache; if there is no value for the specified key, the function returns `nil`.
+
+== `connector:set (key, value [, timeout])` ==
+
+Stores `value` associated with the specified string key in the cache, and returns `true`. If `value` is `nil`, the function unconditionally deletes the value currently associated with `key`, and returns `true` if a value was deleted, and `false` otherwise. If `timeout` is specified, it is a number value that specifies the number of seconds the association remains in the cache; however there is no guarantee that the associated value will not be evicted beforehand.
+
+== `connector:add (key, value [, timeout])` ==
+
+Stores `value` associated with the specified string key in the cache, and returns `true` unless there already is a value associated with `key` in which case the function does nothing and returns `false`. The `nil` value and `timeout` behaviour are the same as in `connector:set`.
+
+== `connector:replace (key, value [, timeout])` ==
+
+Stores `value` associated with the specified string key in the cache and returns `true`unless there is no value associated with `key` in which case the function does nothing and returns `false`. The `nil` value and `timeout` behaviour are the same as in `connector:set`.
+
 = memcached Specific Functions =
 
 == Connection Arguments ==
