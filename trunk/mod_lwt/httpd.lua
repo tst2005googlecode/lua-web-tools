@@ -49,7 +49,7 @@ function dump (v, visited)
                 visited[v] = true
                 write("<table><tablebody>\r\n")
                 for name, value in gpairs(v) do
-                        write("<tr><td>", escape_html(name), "</td><td>")
+                        write("<tr><td>", escape_xml(name), "</td><td>")
                         dump(value, visited)
                         write("<td></tr>\r\n")
                 end
@@ -58,15 +58,15 @@ function dump (v, visited)
 			== "APR table " then
                 write("<table><tablebody>\r\n")
                 for name, value in pairs(v) do
-                        write("<tr><td>", escape_html(name), "</td><td>")
+                        write("<tr><td>", escape_xml(name), "</td><td>")
                         dump(value, visited)
                         write("<td></tr>\r\n")
                 end
                 write("</tablebody></table>\r\n")
         elseif type(v) == "string" then
-                httpd.write("\"", escape_html(v), "\"")
+                httpd.write("\"", escape_xml(v), "\"")
         else
-                httpd.write(escape_html(tostring(v)))
+                httpd.write(escape_xml(tostring(v)))
         end
 end
 
