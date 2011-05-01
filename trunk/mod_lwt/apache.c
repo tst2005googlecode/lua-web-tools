@@ -85,7 +85,11 @@ static int path_fh (lua_State *L, request_rec *r) {
 }
 
 static int path_info_fh (lua_State *L, request_rec *r) {
-	lua_pushstring(L, r->path_info);
+	if (r->path_info != NULL) {
+		lua_pushstring(L, r->path_info);
+	} else {
+		lua_pushliteral(L, "");
+	}
 	return 1;
 }
 
