@@ -10,6 +10,7 @@
 #include <http_core.h>
 #include <http_protocol.h>
 #include <http_log.h>
+#include <util_script.h>
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
@@ -66,6 +67,33 @@ static int request_rec_tostring (lua_State *L) {
 			LWT_APACHE_REQUEST_REC_METATABLE);
 	lua_pushfstring(L, "request (%p)", lr->r);
 
+	return 1;
+}
+
+static int uri_fh (lua_State *L, request_rec *r) {
+	const char *begin, *end;
+
+	/* NULL request line */
+	if (r->the_request == NULL) {
+		lua_pushnil(L);
+		return 1;
+	}
+	
+	/* find URI */
+	begin = r->the_request; 
+	while (*begin && !apr_isspace(*begin)) {
+		begin++;
+	}
+	while (apr_isspace(*begin)) {
+		begin++;
+	}
+	end = begin;
+	while (*end && !apr_isspace(*end)) {
+		end++;
+	}
+
+	/* push */
+	lua_pushlstring(L, begin, end - begin);
 	return 1;
 }
 
@@ -189,6 +217,7 @@ static void add_request_rec_fh (const char *field, request_rec_fh fh) {
  */
 static void init_request_rec_fh (apr_pool_t *pool) {
 	request_rec_fhs = apr_hash_make(pool);
+	add_request_rec_fh("uri", uri_fh);
 	add_request_rec_fh("protocol", protocol_fh);
 	add_request_rec_fh("hostname", hostname_fh);
 	add_request_rec_fh("path", path_fh);
@@ -332,6 +361,23 @@ static int pairs (lua_State *L) {
 }
 
 /*
+ * Sets the status of a request.
+ */
+static int set_status (lua_State *L) {
+	lua_Integer status;
+	request_rec *r;
+
+	status = luaL_checkinteger(L, 1);
+	if (status < 100 || status > 599) {
+		luaL_error(L, "invalid status (expected [100,599], got %d)",
+				status);
+	}
+	r = get_request_rec(L);
+	r->status = status;
+
+	return 0;
+}
+/*
  * Sets the content type.
  */
 static int set_content_type (lua_State *L) {
@@ -341,6 +387,24 @@ static int set_content_type (lua_State *L) {
 	content_type = luaL_checkstring(L, 1);
 	r = get_request_rec(L);
 	ap_set_content_type(r, content_type);
+
+	return 0;
+}
+
+
+/*
+ * Adds a header.
+ */
+static int add_header (lua_State *L) {
+	const char *name, *value;
+	int err;
+	request_rec *r;
+
+	name = luaL_checkstring(L, 1);
+	value = luaL_checkstring(L, 2);
+	err = lua_toboolean(L, 3);
+	r = get_request_rec(L);
+	apr_table_add(err ? r->err_headers_out : r->headers_out, name, value);
 
 	return 0;
 }
@@ -422,7 +486,7 @@ static int add_cookie (lua_State *L) {
 	}
 
 	/* set cookie */
-	apr_table_addn(r->err_headers_out, "Set-Cookie", cookie);
+	apr_table_addn(r->headers_out, "Set-Cookie", cookie);
 
 	return 0;
 }
@@ -518,13 +582,47 @@ static int escape_uri (lua_State *L) {
  */
 static const luaL_Reg functions[] = {
 	{ "pairs", pairs },
+	{ "set_status", set_status },
 	{ "set_content_type", set_content_type },
+	{ "add_header", add_header },
 	{ "add_cookie", add_cookie },
 	{ "write_template", write_template },
 	{ "escape_xml", escape_xml },
 	{ "escape_uri", escape_uri },
 	{ NULL, NULL }
 };
+
+/*
+ * Logs a debug message.
+ */
+static int log_apache (lua_State *L) {
+	const char *s;
+	request_rec *r;
+	lua_Integer level;
+
+	s = luaL_checkstring(L, 1);
+	r = get_request_rec(L);
+	level = lua_tointeger(L, lua_upvalueindex(1));
+
+	ap_log_rerror(APLOG_MARK, level, 0, r, "%s", s);
+
+	return 0;
+}
+
+/*
+ * Registers log.
+ */
+static void register_log (lua_State *L) {
+	lua_pushinteger(L, APLOG_DEBUG);
+	lua_pushcclosure(L, log_apache, 1);
+	lua_setfield(L, -2, "debug");
+	lua_pushinteger(L, APLOG_NOTICE);
+	lua_pushcclosure(L, log_apache, 1);
+	lua_setfield(L, -2, "notice");
+	lua_pushinteger(L, APLOG_ERR);
+	lua_pushcclosure(L, log_apache, 1);
+	lua_setfield(L, -2, "err");
+}
 
 /*
  * Cookie read function for Apache requests.
@@ -1318,10 +1416,23 @@ apr_status_t lwt_apache_push_args (lua_State *L, request_rec *r) {
 	return APR_SUCCESS;
 }
 
+void lwt_apache_push_env (lua_State *L, request_rec *r) {
+	/* populate environment */
+	ap_add_common_vars(r);
+	ap_add_cgi_vars(r);
+
+	/* push it */
+	*((apr_table_t **) lua_newuserdata(L, sizeof(apr_table_t *)))
+			= r->subprocess_env;
+	luaL_getmetatable(L, LWT_APACHE_APR_TABLE_METATABLE);
+	lua_setmetatable(L, -2);
+}
+
 int luaopen_apache (lua_State *L) {
 	/* register module, functions and file handles */
 	luaL_register(L, LWT_APACHE_MODULE, functions);
 	register_filehandles(L);
+	register_log(L);
 
 	/* create metatable for APR tables */
 	luaL_newmetatable(L, LWT_APACHE_APR_TABLE_METATABLE);

@@ -23,6 +23,12 @@ typedef struct lwt_conf_t {
 } lwt_conf_t;
 
 /*
+ * Handlers.
+ */
+#define MOD_LWT_HANDLER "lwt"
+#define MOD_LWT_HANDLER_WSAPI "lwt-wsapi"
+
+/*
  * Error output.
  */
 #define MOD_LWT_ERROROUTPUT_OFF 1
@@ -179,6 +185,7 @@ static apr_status_t lua_cleanup (void *ud) {
  */
 static int handler (request_rec *r) {
 	lwt_stat_t mark;
+	int handler, handler_wsapi;
 	lwt_conf_t *server_conf, *dir_conf, *conf;
 	lua_State *L;
 	const char *error_message;
@@ -188,7 +195,12 @@ static int handler (request_rec *r) {
 	mark_request(&mark, r);
 
 	/* are we concerned about this request? */
-	if (!r->handler || strcmp(r->handler, "lwt") != 0) {
+	if (!r->handler) {
+		return DECLINED;
+	}
+	handler = strcmp(r->handler, MOD_LWT_HANDLER) == 0;
+	handler_wsapi = strcmp(r->handler, MOD_LWT_HANDLER_WSAPI) == 0;
+	if (!handler && !handler_wsapi) {
 		return DECLINED;
 	}
 
@@ -229,6 +241,65 @@ static int handler (request_rec *r) {
 
 	/* push error function for traceback */
 	lua_pushcfunction(L, lwt_util_traceback);
+
+	/* WSAPI */
+	if (handler_wsapi) {
+		/* load the WSAPI module */
+		lua_getglobal(L, "require");
+		if (!lua_isfunction(L, -1)) {
+			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+					"Cannot load WSAPI connector; missing "
+					"'require' function");
+			return HTTP_INTERNAL_SERVER_ERROR;
+		}
+		lua_pushliteral(L, "httpd.wsapi");
+		if (lua_pcall(L, 1, 1, 1) != 0 || !lua_istable(L, -1)) {
+			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+					"Cannot load WSAPI connector; module "
+					"loading failed");
+			return HTTP_INTERNAL_SERVER_ERROR;
+		}
+		lua_getfield(L, -1, "run");
+		if (!lua_isfunction(L, -1)) {
+			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+					"Cannot run WSAPI connector; missing "
+					"'run' function");
+			return HTTP_INTERNAL_SERVER_ERROR;
+		}
+
+		/* set request record and environment in the Lua state */
+		if ((status = lwt_apache_push_request_rec(L, r))
+				!= APR_SUCCESS) {
+			return HTTP_INTERNAL_SERVER_ERROR;
+		}
+		lwt_apache_push_env(L, r);
+
+		/* invoke */
+		switch (lua_pcall(L, 2, 0, 1)) {
+		case 0:
+			return OK;
+
+		case LUA_ERRRUN:
+			error_message = lua_tostring(L, -1);
+			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "Lua "
+					"runtime error running '%s': %s",
+					r->filename, error_message);
+			break;
+
+		case LUA_ERRMEM:
+			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "Lua "
+					"memory allocation error running '%s'",
+					r->filename);
+			break;
+
+		case LUA_ERRERR:
+			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "Lua "
+					"error handler error running '%s'",
+					r->filename);
+			break;
+		}
+		return HTTP_INTERNAL_SERVER_ERROR;
+	}
 
 	/* load chunk */
 	switch (luaL_loadfile(L, r->filename)) {

@@ -5,12 +5,17 @@ module(..., package.seeall)
 -- Imported functions from core
 gpairs = pairs
 pairs = httpd.core.pairs
+set_status = httpd.core.set_status
 set_content_type = httpd.core.set_content_type
+add_header = httpd.core.add_header
 add_cookie = httpd.core.add_cookie
 escape_xml = httpd.core.escape_xml
 escape_uri = httpd.core.escape_uri
 input = httpd.core.input
 output = httpd.core.output
+debug = httpd.core.debug
+notice = httpd.core.notice
+err = httpd.core.err
 
 -- Write template
 function write_template (filename, flags, file)
