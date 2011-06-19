@@ -12,6 +12,8 @@ install:
 	${APACHE2_BIN}/${APXS} -i -a mod_lwt.la
 	mkdir -p ${LUA_INSTALL}
 	cp httpd.lua ${LUA_INSTALL}
+	mkdir -p ${LUA_INSTALL}/httpd
+	cp wsapi.lua ${LUA_INSTALL}/httpd
 
 clean:
 	-rm *.la
