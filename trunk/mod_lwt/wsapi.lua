@@ -14,8 +14,11 @@ end
 
 -- Adds a header
 local function add_header (name, value)
-	if name == "Status" then
+	local lower_name = string.lower(name)
+	if lower_name == "status" then
 		httpd.set_status(tonumber(string.match(value, "^%d+")))
+	elseif lower_name == "content-type" then
+		httpd.set_content_type(value)
 	else
 		httpd.add_header(name, value)
 	end
