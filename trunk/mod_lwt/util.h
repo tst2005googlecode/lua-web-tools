@@ -25,4 +25,13 @@ const char *lwt_util_escape_uri(apr_pool_t *pool, const char *s);
  */
 int lwt_util_traceback (lua_State *L);
 
+/*
+ * Returns the Unix domain timestamp of a date and time expressed in
+ * GMT.
+ *
+ * @param L the Lua state
+ * @return the number of results
+ */
+int lwt_util_timegm (lua_State *L);
+
 #endif /* LWT_UTIL_INCLUDED */

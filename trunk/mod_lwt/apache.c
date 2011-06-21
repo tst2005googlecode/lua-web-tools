@@ -589,6 +589,7 @@ static const luaL_Reg functions[] = {
 	{ "write_template", write_template },
 	{ "escape_xml", escape_xml },
 	{ "escape_uri", escape_uri },
+	{ "timegm", lwt_util_timegm },
 	{ NULL, NULL }
 };
 
