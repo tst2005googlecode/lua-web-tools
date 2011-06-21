@@ -410,88 +410,6 @@ static int add_header (lua_State *L) {
 }
 
 /*
- * Cookie weekdays.
- */
-const char *cookie_weekdays[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri",
-		"Sat" };
-
-/*
- * Cookie months.
- */
-const char *cookie_months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-
-/*
- * Sets a cookie.
- */
-static int add_cookie (lua_State *L) {
-	const char *name, *value, *path, *domain;
-	time_t expires;
-	int secure, httponly;
-	request_rec *r;
-	char *cookie;
-	size_t size, p;
-	struct tm t;
-
-	name = luaL_checkstring(L, 1);
-	value = luaL_optstring(L, 2, NULL);
-	expires = luaL_optinteger(L, 3, -1);
-	path = luaL_optstring(L, 4, NULL);
-	domain = luaL_optstring(L, 5, NULL);
-	secure = lua_toboolean(L, 6);
-	httponly = lua_toboolean(L, 7);
-	r = get_request_rec(L);
-
-	/* calculate the number of bytes required */
-	size = 128;
-	size += strlen(name);
-	if (value != NULL) {
-		size += strlen(value);
-	}
-	if (path != NULL) {
-		size += strlen(path);
-	}
-	if (domain != NULL) {
-		size += strlen(domain);
-	}
-
-	/* build cookie */
-	cookie = (char *) apr_palloc(r->pool, size);
-	p = 0;
-	p += sprintf(cookie + p, "%s=", name);
-	if (value != NULL) {
-		p += sprintf(cookie + p, "%s", value);
-	}
-	if (expires >= 0) {
-		if (gmtime_r(&expires, &t) == NULL) {
-			luaL_error(L, "error encoding time");
-		}
-		p += sprintf(cookie + p, "; expires=%s, %.2d-%s-%.4d "
-				"%.2d:%.2d:%.2d GMT",
-				cookie_weekdays[t.tm_wday], t.tm_mday,
-				cookie_months[t.tm_mon], 1900 + t.tm_year,
-				t.tm_hour, t.tm_min, t.tm_sec);
-	}
-	if (path != NULL) {
-		p += sprintf(cookie + p, "; path=%s", path);
-	}
-	if (domain != NULL) {
-		p += sprintf(cookie + p, "; domain=%s", domain);
-	}
-	if (secure) {
-		p += sprintf(cookie + p, "; secure");
-	}
-	if (httponly) {
-		p += sprintf(cookie + p, "; httponly");
-	}
-
-	/* set cookie */
-	apr_table_addn(r->err_headers_out, "Set-Cookie", cookie);
-
-	return 0;
-}
-
-/*
  * Writes a template.
  */
 static int write_template (lua_State *L) {
@@ -585,11 +503,9 @@ static const luaL_Reg functions[] = {
 	{ "set_status", set_status },
 	{ "set_content_type", set_content_type },
 	{ "add_header", add_header },
-	{ "add_cookie", add_cookie },
 	{ "write_template", write_template },
 	{ "escape_xml", escape_xml },
 	{ "escape_uri", escape_uri },
-	{ "timegm", lwt_util_timegm },
 	{ NULL, NULL }
 };
 
