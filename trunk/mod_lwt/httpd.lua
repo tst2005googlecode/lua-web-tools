@@ -8,7 +8,6 @@ pairs = httpd.core.pairs
 set_status = httpd.core.set_status
 set_content_type = httpd.core.set_content_type
 add_header = httpd.core.add_header
-add_cookie = httpd.core.add_cookie
 escape_xml = httpd.core.escape_xml
 escape_uri = httpd.core.escape_uri
 input = httpd.core.input
@@ -17,6 +16,37 @@ debug = httpd.core.debug
 notice = httpd.core.notice
 err = httpd.core.err
 
+-- Cookie weekdays and months
+local COOKIE_WEEKDAYS = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat",
+		"Sun" }
+local COOKIE_MONTHS = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug",
+		"Sep", "Oct", "Nov", "Dec" }
+
+-- Add Cookie
+function add_cookie (name, value, expires, path, domain, secure, httponly)
+	local cookie = { }
+	table.insert(cookie, string.format("%s=", name))
+	if value then table.insert(cookie, string.format("%s", value)) end
+	if expires then
+		local date = os.date("!*t", expires)
+		table.insert(cookie, string.format("; expires=%s, %.2d-%s-%.4d "
+				.. "%.2d:%.2d:%.2d GMT",
+				COOKIE_WEEKDAYS[date.wday], date.day,
+				COOKIE_MONTHS[date.month], date.year,
+				date.hour, date.min, date.sec))
+	end
+	if path then
+		table.insert(cookie, string.format("; path=%s", path))
+	end
+	if domain then
+		table.insert(cookie, string.format("; domain=%s", domain))
+	end
+	if secure then table.insert(cookie, "; secure") end
+	if httponly then table.insert(cookie, "; httponly") end
+
+	add_header("Set-cookie", table.concat(cookie), true)
+end
+		
 -- Write template
 function write_template (filename, flags, file)
 	return httpd.core.write_template(filename, flags, not file and output
