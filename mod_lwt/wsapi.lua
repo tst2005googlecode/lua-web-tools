@@ -5,15 +5,14 @@ module(..., package.seeall)
 
 -- Loads an runs a WSAPI script
 local function do_wsapi (wsapi_env)
-	local path, file, modname, ext = wsapi.common.find_module(
-			wsapi_env, wsapi_env.request.filename, "lwt.wsapi")
+	local path, file, modname = wsapi.common.find_module(wsapi_env,
+			wsapi_env.request.filename, "lwt.wsapi")
 	if not path then
 		error({ 404, string.format("Resource '%s' not found",
 				wsapi_env.SCRIPT_NAME) })
 	end
-	if ext == "ws" then ext = "lua" end
 	wsapi.app_path = path
-	local app = wsapi.common.load_wsapi(path, file, modname, ext)
+	local app = wsapi.common.load_wsapi(path, file, modname, "lua")
 	wsapi_env.APP_PATH = path
 	return app(wsapi_env)
 end
