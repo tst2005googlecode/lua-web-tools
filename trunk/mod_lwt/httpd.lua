@@ -36,7 +36,7 @@ end
 -- Redirects
 function redirect (request, uri, status)
 	request.err_headers_out["Location"] = string.format("http://%s%s",
-			request.hostname, uri)
+			request.headers_in["Host"] or request.hostname, uri)
 	return status
 end
 

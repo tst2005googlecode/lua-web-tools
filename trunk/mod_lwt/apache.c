@@ -486,7 +486,7 @@ static int add_cookie (lua_State *L) {
 	}
 
 	/* set cookie */
-	apr_table_addn(r->headers_out, "Set-Cookie", cookie);
+	apr_table_addn(r->err_headers_out, "Set-Cookie", cookie);
 
 	return 0;
 }
