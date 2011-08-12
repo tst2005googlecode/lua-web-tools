@@ -101,6 +101,7 @@ static int supported (lua_State *L, int index) {
 static void encode (lua_State *L, buf_rec *B, int index) {
 	double d;
 	uint32_t u, nu, narr, nrec;
+	size_t narr_pos, nrec_pos;
 
 	switch (lua_type(L, index)) {
 	case LUA_TBOOLEAN:
@@ -153,41 +154,35 @@ static void encode (lua_State *L, buf_rec *B, int index) {
 			return;
 		}
 
-		/* analyze table */
+		/* analyze and write table */
+		require(L, B, 1 + sizeof(narr) + sizeof(nrec));
+		B->b[B->pos++] = (char) LUA_TTABLE;
+		narr_pos = B->pos;
+		B->pos += sizeof(narr);
+		nrec_pos = B->pos;
+		B->pos += sizeof(nrec);
 		narr = 0;
 		nrec = 0;
 		d = 1;
 		lua_pushnil(L);
 		while (lua_next(L, index)) {
 			if (supported(L, -2) && supported(L, -1)) {
-				if (lua_isnumber(L, -2)
+				if (nrec == 0 && lua_isnumber(L, -2)
 						&& lua_tonumber(L, -2) == d) {
 					narr++;
 					d++;
 				} else {
 					nrec++;
 				}
-			}
-			lua_pop(L, 1);
-		}
-
-		/* write table */
-		require(L, B, 1 + sizeof(narr) + sizeof(nrec));
-		B->b[B->pos++] = (char) LUA_TTABLE;
-		narr = htobe32(narr);
-		memcpy(&B->b[B->pos], &narr, sizeof(narr));
-		B->pos += sizeof(narr);
-		nrec = htobe32(nrec);
-		memcpy(&B->b[B->pos], &nrec, sizeof(nrec));
-		B->pos += sizeof(nrec);
-		lua_pushnil(L);
-		while (lua_next(L, index)) {
-			if (supported(L, -2) && supported(L, -1)) {
 				encode(L, B, lua_gettop(L) - 1);
 				encode(L, B, lua_gettop(L));
 			}	
 			lua_pop(L, 1);
 		}
+		narr = htobe32(narr);
+		memcpy(&B->b[narr_pos], &narr, sizeof(narr));
+		nrec = htobe32(nrec);
+		memcpy(&B->b[nrec_pos], &nrec, sizeof(nrec));
 		break;
 
 	default:
