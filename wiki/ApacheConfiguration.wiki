@@ -4,15 +4,20 @@
 
 mod_lwt provides an Apache handler and associated configuration directives. 
 
-= Configuring the Handler =
+= Configuring the Handlers =
 
-The handler provided by mod_lwt is called `lwt`. This handler handles requests to the HTTP server by invoking a Lua script. The handler is typically configured by having the following directive either in the global server configuration or in a virtual host configuration:
+The handlers provided my mod_lwt are called `lwt` and `lwt-wsapi`. These handlers handle requests to the HTTP server by invoking a Lua script. The `lwt` handler procivdes the request processing of LWT, and the `lwt-wsapi` handler provides a request processing that is compatible to [http://keplerproject.github.com/wsapi/ WSAPI].
+
+The handlers are typically configured by having the following directives either in the global server configuration or in a virtual host configuration:
 
 {{{
 AddHandler lwt .lua
+AddHandler lwt-wsapi .ws
 }}}
 
-This directive associates the `lwt` handler with the `.lua` file extension. Requests for files ending in `.lua` are passed to the `lwt` handler.
+These directives associates the `lwt` and `lwt-wsapi` handlers with the `.lua` and `.ws` file extensions. Requests for files ending in `.lua` are passed to the `lwt` handler; requeests for files ending in `.ws` are passed to the `lwt-wsapi` handler.
+
+The handlers can be added independently.
 
 = Configuration Directives =
 
@@ -21,5 +26,4 @@ mod_lwt provides several configuration directives. These directives can be used 
 || *Directive* || *Type* || *Default* || *Description* ||
 || `LuaPath` || `string` || Lua default || The `LuaPath` directive configures the Lua path. See the [http://www.lua.org/manual/5.1/manual.html#5.3 Lua documentation] for information on the workings of the Lua path. ||
 || `LuaCPath` || `string` || Lua default || Like `LuaPath`, but configures the Lua C path instead. || 
-|| `LuaErrorOutput` || `On` or `Off` || `Off` || Determines whether a diagnostic information formatted in HTML is written to the HTTP response when a Lua syntax error or runtime error is encountered while loading or running the Lua script. ||
-
+|| `LuaErrorOutput` || `On` or `Off` || `Off` || Determines whether a diagnostic information formatted in HTML is written to the HTTP response when a Lua syntax error or runtime error is encountered while loading or running the Lua script. This directive has no effect in the `lwt-wsapi` handler. ||
