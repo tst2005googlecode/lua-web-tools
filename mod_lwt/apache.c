@@ -98,17 +98,29 @@ static int uri_fh (lua_State *L, request_rec *r) {
 }
 
 static int protocol_fh (lua_State *L, request_rec *r) {
-	lua_pushstring(L, r->protocol);
+	if (r->protocol != NULL) {
+		lua_pushstring(L, r->protocol);
+	} else {
+		lua_pushnil(L);
+	}
 	return 1;
 }
 
 static int hostname_fh (lua_State *L, request_rec *r) {
-	lua_pushstring(L, r->hostname);
+	if (r->hostname != NULL) {
+		lua_pushstring(L, r->hostname);
+	} else {
+		lua_pushnil(L);
+	}
 	return 1;
 }
 
 static int path_fh (lua_State *L, request_rec *r) {
-	lua_pushstring(L, r->uri);
+	if (r->uri != NULL) {
+		lua_pushstring(L, r->uri);
+	} else {
+		lua_pushnil(L);
+	}
 	return 1;
 }
 
@@ -116,7 +128,7 @@ static int path_info_fh (lua_State *L, request_rec *r) {
 	if (r->path_info != NULL) {
 		lua_pushstring(L, r->path_info);
 	} else {
-		lua_pushliteral(L, "");
+		lua_pushnil(L);
 	}
 	return 1;
 }
@@ -125,13 +137,17 @@ static int args_fh (lua_State *L, request_rec *r) {
 	if (r->args != NULL) {
 		lua_pushstring(L, r->args);
 	} else {
-		lua_pushstring(L, "");
+		lua_pushnil(L);
 	}
 	return 1;
 }	
 
 static int method_fh (lua_State *L, request_rec *r) {
-	lua_pushstring(L, r->method);
+	if (r->args != NULL) {
+		lua_pushstring(L, r->method);
+	} else {
+		lua_pushnil(L);
+	}
 	return 1;
 }
 
@@ -166,14 +182,22 @@ static int err_headers_out_fh (lua_State *L, request_rec *r) {
 }
 
 static int filename_fh (lua_State *L, request_rec *r) {
-	lua_pushstring(L, r->filename);
+	if (r->filename != NULL) {
+		lua_pushstring(L, r->filename);
+	} else {
+		lua_pushnil(L);
+	}
 	return 1;
 }
 
 static int filedir_fh (lua_State *L, request_rec *r) {
-	lua_pushstring(L, apr_pstrndup(r->pool, r->filename,
-			strlen(r->filename) - strlen(apr_filepath_name_get(
-			r->filename))));
+	if (r->filename != NULL) {
+		lua_pushstring(L, apr_pstrndup(r->pool, r->filename,
+				strlen(r->filename) - strlen(
+				apr_filepath_name_get(r->filename))));
+	} else {
+		lua_pushnil(L);
+	}
 	return 1;
 }
 
@@ -196,12 +220,20 @@ static int auth_type_fh (lua_State *L, request_rec *r) {
 }
 
 static int local_ip_fh (lua_State *L, request_rec *r) {
-	lua_pushstring(L, r->connection->local_ip);
+	if (r->connection->local_ip != NULL) {
+		lua_pushstring(L, r->connection->local_ip);
+	} else {
+		lua_pushnil(L);
+	}
 	return 1;
 }
 
 static int remote_ip_fh (lua_State *L, request_rec *r) {
-	lua_pushstring(L, r->connection->remote_ip);
+	if (r->connection->remote_ip != NULL) {
+		lua_pushstring(L, r->connection->remote_ip);
+	} else {
+		lua_pushnil(L);
+	}
 	return 1;
 }
 
