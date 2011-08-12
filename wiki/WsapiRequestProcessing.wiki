@@ -43,6 +43,6 @@ The request value is identical to the request value passed by the [RequestProces
 
 = The `env` Value =
 
-The `env` is a table-like userdata value (APR table) and contains the subprocess environement (aka CGI environment) of the current request.
+The `env` value is a table-like userdata value (APR table) and contains the subprocess environement (aka CGI environment) of the current request.
 
 The fields of the `env` value can be accessed by name (e.g. `env.field`) or by iterating over the arguments using the `httpd.pairs` function.
