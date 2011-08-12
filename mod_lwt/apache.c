@@ -466,21 +466,6 @@ static int write_template (lua_State *L) {
 }
 
 /*
- * Escapes XML reseved characters in a string.
- */
-static int escape_xml (lua_State *L) {
-	const char *s;
-	request_rec *r;
-
-	s = luaL_checkstring(L, 1);
-	r = get_request_rec(L);
-
-	lua_pushstring(L, ap_escape_html(r->pool, s));
-
-	return 1;
-}
-
-/*
  * Escapes URI reserved and unsafe characters in a string.
  */
 static int escape_uri (lua_State *L) {
@@ -496,6 +481,36 @@ static int escape_uri (lua_State *L) {
 }
 
 /*
+ * Escapes XML reseved characters in a string.
+ */
+static int escape_xml (lua_State *L) {
+	const char *s;
+	request_rec *r;
+
+	s = luaL_checkstring(L, 1);
+	r = get_request_rec(L);
+
+	lua_pushstring(L, ap_escape_html(r->pool, s));
+
+	return 1;
+}
+
+/*
+ * Escapes JavaScript reserved characters in a string.
+ */
+static int escape_js (lua_State *L) {
+	const char *s;
+	request_rec *r;
+	
+	s = luaL_checkstring(L, 1);
+	r = get_request_rec(L);
+
+	lua_pushstring(L, lwt_util_escape_js(r->pool, s));
+
+	return 1;
+}
+
+/*
  * LWT functions
  */
 static const luaL_Reg functions[] = {
@@ -504,8 +519,9 @@ static const luaL_Reg functions[] = {
 	{ "set_content_type", set_content_type },
 	{ "add_header", add_header },
 	{ "write_template", write_template },
-	{ "escape_xml", escape_xml },
 	{ "escape_uri", escape_uri },
+	{ "escape_xml", escape_xml },
+	{ "escape_js", escape_js },
 	{ NULL, NULL }
 };
 

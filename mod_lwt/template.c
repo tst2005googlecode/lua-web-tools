@@ -80,7 +80,7 @@ typedef struct template_node_t {
                 };
                 struct {
                         const char *raw_str;
-                        int raw_len;
+                        size_t raw_len;
                 };
         };
 } template_node_t;
@@ -126,8 +126,9 @@ typedef struct block_t {
 #define TEMPLATE_FPARSE 1
 #define TEMPLATE_FESCXML 2
 #define TEMPLATE_FESCURL 4
-#define TEMPLATE_FSUPNIL 8
-#define TEMPLATE_FSUPERR 16
+#define TEMPLATE_FESCJS 8
+#define TEMPLATE_FSUPNIL 256
+#define TEMPLATE_FSUPERR 512
 #define TEMPLATE_DEFAULT_FLAGS "px"
 
 /*
@@ -207,6 +208,10 @@ static int parse_flags (const char *flags) {
 
 		case 'u':
 			value |= TEMPLATE_FESCURL;
+			break;
+
+		case 'j':
+			value |= TEMPLATE_FESCJS;
 			break;
 
 		case 'n':
@@ -1073,6 +1078,9 @@ static apr_status_t render_template (render_rec *d) {
 			if (n->sub_flags & TEMPLATE_FESCXML) {
 				str = ap_escape_html(d->pool, str);
 			}
+			if (n->sub_flags & TEMPLATE_FESCJS) {
+				str = lwt_util_escape_js(d->pool, str);
+			}
 			fputs(str, d->f);
 			i++;
 			break;
@@ -1203,7 +1211,7 @@ apr_status_t lwt_template_dump (apr_array_header_t *t, lua_State *L, FILE *f,
 			break;
 
 		case TEMPLATE_TRAW:
-			fprintf(f, "RAW len=%d", n->raw_len);
+			fprintf(f, "RAW len=%zd", n->raw_len);
 			break;
 		}
 		fputs("</li>\r\n", f);
