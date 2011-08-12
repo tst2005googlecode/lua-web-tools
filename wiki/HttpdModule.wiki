@@ -1,10 +1,10 @@
 #summary HTTPD module API
 
+<wiki:toc max_depth="2" />
+
 = Introduction =
 
 This page describes the functions provided by the HTTPD module.
-
-<wiki:toc max_depth="2" />
 
 = Import =
 
