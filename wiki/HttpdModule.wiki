@@ -4,6 +4,8 @@
 
 This page describes the functions provided by the HTTPD module.
 
+<wiki:toc max_depth="2" />
+
 = Import =
 
 {{{
@@ -22,9 +24,23 @@ for key, value in httpd.pairs(t) do body end
 
 will iterate over all key-value pairs in the passed APR table. This function is used with the header tables of the `request` value and with the `args` value.
 
+== `httpd.set_status (status)` ==
+
+Sets the HTTP response status to `status`, a number between 100 and 599.
+
+Calling this function is different from returning the same status from the script. If a script calls this function and then returns no value or `nil`, the output from the script is fully processed; if a script returns a HTTP status, processing is defered to the Apache error document handling. If a script generates no output, such as in a 204 (no content) or 404 (not found) situation, then returning that status is recommended. On the other hand, if a script does generate output and requires a status other than 200 (OK), then calling `set_status` is recommended.
+
 == `httpd.set_content_type (content_type)` ==
 
 Sets the HTTP response content type to `content_type`.
+
+If you do not set a content type explicitly, the content type defaults to `text/html`.
+
+== `httpd.add_header (name, value [, err_header])` ==
+
+Adds a HTTPD response header `name`. `value` is a string representing the value of the header. If `err_header` is `true` when evaluated as a boolean value, the response header is added to the error output headers which are transmitted regardless of the outcome of the script; else the response header is added to the regular output headers which are only transmitted if the request is handled successfully, i.e. the script returns no value or `nil`.
+
+Calling this function is different from index assigning to the `request.headers_out` and `request.err_headers_out` tables. This function adds a new header regardless of whether a header with the same name already exists; index assigning to the headers tables on the other hand would replace a header with the same name.
 
 == `httpd.add_cookie (name [, value [, expires [, path [, domain [, secure [, httponly]]]]]])` ==
 
@@ -35,8 +51,9 @@ Adds a cookie `name`. `value` is a string representing the value of the cookie; 
 Writes a template from a file referenced by `filename`. `flags` is a string with each character modifying the processing of the template as follows: 
 
   * `p`: parses the template; if absent, the template is written as is
-  * `x`: escapes XML reserved characters in substitutions
   * `u`: escapes URI reserved characters in substitutions
+  * `x`: escapes XML reserved characters in substitutions
+  * `j`: escapes JavaScript string literal reserved characters in substitutions
   * `n`: writes an empty string for `nil` values in substitution expressions
   * `e`: writes an empty string for substitution expressions with a runtime error; if absent, a runtime error is propagated to the caller
 
@@ -54,6 +71,10 @@ If a template is parsed, the following instructions are processed by the templat
 || `${exp}` || Substitutes the value of `exp`. If the value is not a string or number, substitutes `(type)` where `type` is the type of the value. Substitutions are processed following the current flags, ignoring `p`. ||
 || `$[flags]{exp}` || Equivalent to `${exp}` with `flags` used instead of the current flags. ||
 
+== `httpd.escape_uri (string)` == 
+
+Escapes URI reserved characters in a string and returns the escaped string. More specifically, alphanumeric characters, `-`, `.`, `_`, and `~` are considered unreserved characters, and all other characters are considered reserved characters according to RFC 3986. Reserved characters are escaped by a percent sign followed by two hexadecimal (uppercase) digits representing the value of the escaped character.
+
 == `httpd.escape_xml (string)` ==
 
 Escapes XML reserved characters in a string and returns the escaped string. More specifically, the following characters are escaped:
@@ -64,9 +85,20 @@ Escapes XML reserved characters in a string and returns the escaped string. More
 || `<` || `&lt;` ||
 || `>` || `&gt;` ||
 
-== `httpd.escape_uri (string)` == 
+== `httpd.escape_js (string)` ==
 
-Escapes URI reserved characters in a string and returns the escaped string. More specifically, alphanumeric characters, `-`, `.`, `_`, and `~` are considered unreserved characters, and all other characters are considered reserved characters according to RFC 3986. Reserved characters are escaped by a percent sign followed by two hexadecimal (uppercase) digits representing the value of the escaped character.
+Escapes JavaScript string literal reserved characters in a string and returns the escaped string. More specifically, the following characters are escaped:
+
+|| *Character* || *Escape* ||
+|| Backspace || `\b` ||
+|| Horizontal tab || `\t` ||
+|| Newline || `\n` ||
+|| Vertical tab || `\v` ||
+|| Form feed || `\f` ||
+|| Carriage return || `\r` ||
+|| Double quote || `\"` ||
+|| Single quote || `\'` ||
+|| Backslash || `\\` ||
 
 == `httpd.input` ==
 
@@ -84,9 +116,21 @@ Equivalent to `httpd.input:read(...)`.
 
 Equivalent to `httpd.output:write(...)`.
 
+== `httpd.debug (message)` ==
+
+Logs a message to the Apache HTTP server log with DEBUG level.
+
+== `httpd.notice (message)` ==
+
+Logs a message to the Apache HTTP server log with NOTICE level.
+
+== `httpd.err (message)` ==
+
+Logs a message to the Apache HTTP server log with ERR level.
+
 == `httpd.redirect (request, uri, status)` ==
 
-Sets a  `Location` header with a value of `http://{request.hostname}{uri}` and returns `status`. The idiom for using this function is
+Sets a  `Location` header with a value of `http://{host}{uri}` and returns `status`. The host is determined from the request. The idiom for using this function is
 
 {{{
 return httpd.redirect(request, "/next.lua", status)
@@ -100,7 +144,7 @@ Writes `value` to the HTTP response body, formatted in HTML. The function handle
 
 == `httpd.match (path_info, ...)` ==
 
-Matches `path_info` against the patterns following it and returns the captured values of the first matching pattern with numbers from empty captures replaced by `nil`. The idiom for using this function is
+Matches `path_info` against the patterns following it and returns the captured values of the first matching pattern. Matched empty captures in the matching pattern, i.e. `()`, are returned as `nil`. The idiom for using this function is
 
 {{{
 a, b, c = httpd.match(request.path_info,
