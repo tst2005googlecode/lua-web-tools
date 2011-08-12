@@ -2,7 +2,7 @@
 
 = Overview =
 
-The mod_lwt handler handles requests to the HTTP server by invoking a Lua script. More formally, the handler performs the following steps:
+The `lwt` handler provided by mod_lwt handles requests to the HTTP server by invoking a Lua script. More formally, the handler performs the following steps:
 
   # Test if the request is supposed to be handled by `lwt`. If not, decline to handle the request.
   # Test if the Lua script file exists. If not, return a HTTP 404 (Not Found) status code.
@@ -63,7 +63,7 @@ Also note that the `request` value is a userdata value that cannot be iterated w
 
 = The `args` Value =
 
-The `args` value is passed as the second argument to a Lua script. It is a table-like userdata value and contains the arguments passed with the current request. More specifically, mod_lwt decodes the following types of arguments in the specified order:
+The `args` value is passed as the second argument to a Lua script. It is a table-like userdata value (APR table) and contains the arguments passed with the current request. More specifically, mod_lwt decodes the following types of arguments in the specified order:
 
   # arguments from the URI
   # arguments from the body with a content type of `application/x-www-form-urlencoded` (regular form post), or `multipart/form-data` (typically used for file uploads)
