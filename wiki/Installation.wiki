@@ -136,6 +136,7 @@ To install mod_lwt globally, create `/etc/apache2/mods-available/lwt.conf` with 
 {{{
 <IfModule mod_lwt.c>
 AddHandler lwt .lua
+AddHandler lwt-wsapi .ws
 </IfModule>
 }}}
 
@@ -148,7 +149,7 @@ $ sudo a2enmod lwt
 $ sudo service apache2 restart
 }}}
 
-Now the Apache HTTP Server will pass `.lua` files globally to mod_lwt. Of course, like any module, mod_lwt can also be enabled on a virtual host basis.
+Now the Apache HTTP Server will pass `.lua` and `.ws` files globally to mod_lwt. Of course, like any module, mod_lwt can also be enabled on a virtual host basis.
 
 Create a basic test page in `/var/www/test.lua`:
 
