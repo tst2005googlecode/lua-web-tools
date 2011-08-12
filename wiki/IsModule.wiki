@@ -88,10 +88,6 @@ Returns a string in the `YYYY-MM-DD HH:MM:SS` format using UTC corresponding to 
 
 Returns a Unix timestamp corresponding the string `date` in the `YYYY-MM-DD HH:MM:SS` format using UTC; returns `nil` if `date` is `nil`.
 
-== `is.date_time (date)` ==
-
-Returns a Unix timestamp representing the string `date` in the `YYYY-MM-DD` format; returns `nil` if `date` is `nil`.
-
 == `is.connect (table)` ==
 
 Creates and returns a connection to an information system using the connection arguments supplied in `table`. `table` must contain a field `driver` that determines the type of information system to connect to. Other required fields depend on the driver and are documented in the respective sections below. The function returns a connection if it is successful, and raises an error otherwise.
