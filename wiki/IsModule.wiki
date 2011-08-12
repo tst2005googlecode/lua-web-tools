@@ -76,10 +76,6 @@ require "is.sqlite3"
 
 The functions described in this section are common to all information systems.
 
-== `is.trim (s)` ==
-
-Removes leading and trailing whitespace from `s`, and returns the trimmed string; returns `nil` if `s` is `nil`.
-
 == `is.date (time)` ==
 
 Returns a string in the `YYYY-MM-DD HH:MM:SS` format using UTC corresponding to the Unix timestamp `time`; returns `nil` if `time` is `nil`.
