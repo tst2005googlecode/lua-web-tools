@@ -116,15 +116,15 @@ Equivalent to `httpd.output:write(...)`.
 
 == `httpd.debug (message)` ==
 
-Logs a message to the Apache HTTP server log with DEBUG level.
+Logs a message to the HTTP server log with DEBUG level.
 
 == `httpd.notice (message)` ==
 
-Logs a message to the Apache HTTP server log with NOTICE level.
+Logs a message to the HTTP server log with NOTICE level.
 
 == `httpd.err (message)` ==
 
-Logs a message to the Apache HTTP server log with ERR level.
+Logs a message to the HTTP server log with ERR level.
 
 == `httpd.redirect (request, uri, status)` ==
 
