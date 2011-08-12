@@ -54,6 +54,88 @@ const char *lwt_util_escape_uri (apr_pool_t *pool, const char *s) {
 	return n;
 }
 
+const char *lwt_util_escape_js (apr_pool_t *pool, const char *s) {
+	size_t cnt, esc_cnt, ps, pn;
+	char *n;
+	
+	/* count reserved and unsafe characters */
+	cnt = 0;
+	esc_cnt = 0;
+	while (s[cnt] != '\0') {
+		switch (s[cnt]) {
+			case '\b':
+			case '\t':
+			case '\n':
+			case '\v':
+			case '\f':
+			case '\r':
+			case '\"':
+			case '\'':
+			case '\\':
+				esc_cnt++;
+		}
+		cnt++;
+	}
+
+	/* make escaped string */
+	n = (char *) apr_palloc(pool, cnt + esc_cnt + 1);
+	pn = 0;
+	for (ps = 0; ps < cnt; ps++) {
+		switch (s[ps]) {
+			case '\b':
+				n[pn++] = '\\';
+				n[pn++] = 'b';
+				break;
+
+			case '\t':
+				n[pn++] = '\\';
+				n[pn++] = 't';
+				break;
+
+			case '\n':
+				n[pn++] = '\\';
+				n[pn++] = 'n';
+				break;
+
+			case '\v':
+				n[pn++] = '\\';
+				n[pn++] = 'v';
+				break;
+
+			case '\f':
+				n[pn++] = '\\';
+				n[pn++] = 'f';
+				break;
+
+			case '\r':
+				n[pn++] = '\\';
+				n[pn++] = 'r';
+				break;
+
+			case '\"':
+				n[pn++] = '\\';
+				n[pn++] = '\"';
+				break;
+
+			case '\'':
+				n[pn++] = '\\';
+				n[pn++] = '\'';
+				break;
+
+			case '\\':
+				n[pn++] = '\\';
+				n[pn++] = '\\';
+				break;
+
+			default:
+				n[pn++] = s[ps];
+		}
+	}
+	n[pn] = '\0';
+
+	return n;
+}
+
 int lwt_util_traceback (lua_State *L) {
 	/* get the traceback function from the debug module */
 	lua_getfield(L, LUA_GLOBALSINDEX, LUA_DBLIBNAME);
