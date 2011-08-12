@@ -2,7 +2,7 @@
 
 = Overview =
 
-The `lwt-wsapi` handler provided by mod_lwt handles requests to the HTTP server by invoking a Lua script using WSAPI. More formally, the handler performs the following steps:
+The `lwt-wsapi` handler provided by mod_lwt handles requests to the HTTP server by invoking a Lua script using [http://keplerproject.github.com/wsapi/ WSAPI]. More formally, the handler performs the following steps:
 
   # Test if the request is supposed to be handled by `lwt-wsapi`. If not, decline to handle the request.
   # Test if the Lua script file exists. If not, return a HTTP 404 (Not Found) status code.
