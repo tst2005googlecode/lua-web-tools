@@ -8,8 +8,9 @@ pairs = httpd.core.pairs
 set_status = httpd.core.set_status
 set_content_type = httpd.core.set_content_type
 add_header = httpd.core.add_header
-escape_xml = httpd.core.escape_xml
 escape_uri = httpd.core.escape_uri
+escape_xml = httpd.core.escape_xml
+escape_js = httpd.core.escape_js
 input = httpd.core.input
 output = httpd.core.output
 debug = httpd.core.debug
@@ -108,6 +109,7 @@ end
 -- Matches multiple patterns in sequence and returns the captures from the
 -- first matching pattern, ignoring any empty captures
 function match (s, ...)
+	s = s or ""
 	local matches
 	for i = 1, select("#", ...) do
 		matches = { string.match(s, (select(i, ...))) }
