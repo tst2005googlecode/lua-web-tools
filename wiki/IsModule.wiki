@@ -102,7 +102,7 @@ Reads the next row produced by the previously executed SQL statement and returns
 
 == `connection:rows ([read_mode])` ==
 
-Returns three values such that the production
+Returns three values so that the construction
 
 {{{
 for row in connection:rows ([read_mode]) do body end
