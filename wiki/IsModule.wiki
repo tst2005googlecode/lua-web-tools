@@ -4,7 +4,7 @@
 
 = Introduction =
 
-This page describes the functions provided by the IS module. This IS module supports the access to information systems. More specifically, the following information systems are currently supported:
+This page describes the functions provided by the IS module. This IS module supports the access to information systems in an SQL injection safe way. More specifically, the following information systems are currently supported:
 
   * MySQL
   * TDS (Sybase, SQL Server via FreeTDS)
