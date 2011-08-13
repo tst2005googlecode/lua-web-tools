@@ -6,7 +6,7 @@ mod_lwt provides an Apache handler and associated configuration directives.
 
 = Configuring the Handlers =
 
-The handlers provided my mod_lwt are called `lwt` and `lwt-wsapi`. These handlers handle requests to the HTTP server by invoking a Lua script. The `lwt` handler procivdes the request processing of LWT, and the `lwt-wsapi` handler provides a request processing that is compatible to [http://keplerproject.github.com/wsapi/ WSAPI].
+The handlers provided my mod_lwt are called `lwt` and `lwt-wsapi`. These handlers handle requests to the HTTP server by invoking a Lua script. The `lwt` handler provides the native request processing of LWT, and the `lwt-wsapi` handler provides a request processing that is compatible to [http://keplerproject.github.com/wsapi/ WSAPI].
 
 The handlers are typically configured by having the following directives either in the global server configuration or in a virtual host configuration:
 
