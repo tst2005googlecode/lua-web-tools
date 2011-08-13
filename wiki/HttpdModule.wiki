@@ -28,25 +28,25 @@ will iterate over all key-value pairs in the passed APR table. This function is 
 
 Sets the HTTP response status to `status`, a number between 100 and 599.
 
-Calling this function is different from returning the same status from the script. If a script calls this function and then returns no value or `nil`, the output from the script is fully processed; if a script returns a HTTP status, processing is defered to the Apache error document handling. If a script generates no output, such as in a 204 (No Content) or 404 (Not Found) situation, then returning that status is recommended; if a script does generate output and requires a status other than 200 (OK), then calling `set_status` is recommended.
+Calling this function is different from returning a status from a script. If a script calls this function and then returns no value or `nil`, the requested is considered as handled successfully, and the output from the script is fully processed; if a script returns a HTTP status, processing is defered to the Apache error document handling. Use this function if a script does generate output and requires a status other than 200 (OK); return a status if a script generates no output, such as in a 204 (No Content) or 404 (Not Found) situation.
 
 == `httpd.set_content_type (content_type)` ==
 
-Sets the HTTP response content type to `content_type`.
+Sets the HTTP response content type to the specified value.
 
 == `httpd.add_header (name, value [, err_header])` ==
 
-Adds a HTTP response header `name`. `value` is a string representing the value of the header. If `err_header` is `true` when evaluated as a boolean value, the response header is added to the error output headers which are transmitted regardless of the outcome of the script; else the response header is added to the regular output headers which are only transmitted if the request is handled successfully, i.e. if the script returns no value or `nil`.
+Adds a HTTP response header with the specified name. `value` is a string representing the value of the header. If `err_header` is `true` when evaluated as a boolean value, the header is added to the error output headers which are transmitted regardless of the outcome of the script; else the header is added to the regular output headers which are only transmitted if the request is handled successfully, i.e. if the script returns no value or `nil`.
 
 Calling this function is different from index assigning to the `request.headers_out` and `request.err_headers_out` tables. This function _adds_ a new header regardless of whether a header with the same name already exists; index assigning to the headers tables _replaces_ a header with the same name.
 
 == `httpd.add_cookie (name [, value [, expires [, path [, domain [, secure [, httponly]]]]]])` ==
 
-Adds a cookie `name`. `value` is a string representing the value of the cookie; if `value` is absent, the value of the cookie is the empty string. `expires` is a number representing the expiry of the cookie as a Unix timestamp; if `expires` is absent or negative, the cookie is valid for the session only. `path` and `domain` are string values representing the path and domain of the cookie respectively; if they are absent, the cookie is added without an explicit path or domain. If `secure` and `httponly` are `true` when evaluated as boolean values, they respectively indicate that the cookie must only be transmitted over secure connections and that the cookie is unavailable to client-side scripting; otherwise the cookie is added without these security restrictions.
+Adds a cookie with the specified name. `value` is a string representing the value of the cookie; if `value` is absent, the value of the cookie is the empty string. `expires` is a number representing the expiry of the cookie as a Unix timestamp; if `expires` is absent or negative, the cookie is valid for the session only. `path` and `domain` are string values representing the path and domain of the cookie respectively; if they are absent, the cookie is added without an explicit path or domain. If `secure` and `httponly` are `true` when evaluated as boolean values, they respectively indicate that the cookie must only be transmitted over secure connections and that the cookie is unavailable to client-side scripting; otherwise the cookie is added without these security restrictions.
 
 == `httpd.write_template (filename [, flags [, file]])` ==
 
-Writes a template from a file referenced by `filename`. `flags` is a string with each character modifying the processing of the template as follows: 
+Writes a template from a file designated by `filename`. `flags` is a string with each character modifying the processing of the template as follows: 
 
   * `p`: parses the template; if absent, the template is written as is
   * `u`: escapes URI reserved characters in substitutions
