@@ -308,7 +308,7 @@ static int handler (request_rec *r) {
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
 				"Lua syntax error compiling '%s': %s",
 				r->filename, error_message);
-		if (conf->erroroutput == MOD_LWT_ERROROUTPUT_ON) {
+		if (conf->erroroutput != MOD_LWT_ERROROUTPUT_OFF) {
 			ap_rputs("<!DOCTYPE HTML>\r\n", r);
 			ap_rputs("<html>\r\n", r);
 			ap_rputs("<head><title>Lua Compilation Error</title>"
@@ -385,7 +385,7 @@ static int handler (request_rec *r) {
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
 				"Lua runtime error running '%s': %s",
 				r->filename, error_message);
-		if (conf->erroroutput == MOD_LWT_ERROROUTPUT_ON) {
+		if (conf->erroroutput != MOD_LWT_ERROROUTPUT_OFF) {
 			ap_rputs("<!DOCTYPE HTML>\r\n", r);
 			ap_rputs("<html>\r\n", r);
 			ap_rputs("<head><title>Lua Runtime Error</title>"
