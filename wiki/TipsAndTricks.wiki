@@ -2,7 +2,7 @@
 
 = Introduction =
 
-This page provides tips and tricks ("best pratices") for using Lua Web Tools.
+This page provides tips and tricks ("best practices") for using Lua Web Tools.
 
 <wiki:toc max_depth="1" />
 
