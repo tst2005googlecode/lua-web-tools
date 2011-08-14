@@ -61,3 +61,17 @@ values = modulex.read_values(name)
 httpd.set_content_type("text/html; charset=utf-8")
 httpd.write_template(request.filedir .. "templates/template1.html")
 }}}
+
+= Hiding The .lua Extension In URLs =
+
+An easy way to remove the need for the .lua extension in URLs is to enable handler multiview negotiation in Apache:
+
+{{{
+MultiviewsMatch Handlers
+}}}
+
+A request URI of /request1 will now match /request1.lua. Please see the [http://httpd.apache.org/docs/2.2/mod/mod_mime.html#multiviewsmatch Apache HTTP Server documentation] for more information.
+
+= Avoiding Compilation In Production =
+
+In a production environment, you may want to avoid the compilation of Lua scripts and modules on each request. The best way to achieve this is to invoke `luac` as part of your deployement process. LWT loads both uncompiled and compiled Lua scripts and modules. Loading a compiled Lua script is typically more efficient.
