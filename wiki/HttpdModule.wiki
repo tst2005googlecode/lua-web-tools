@@ -51,7 +51,7 @@ Writes a template from a file designated by `filename`. `flags` is a string with
   * `p`: parses the template; if absent, the template is written as is
   * `u`: escapes URI reserved characters in substitutions
   * `x`: escapes XML reserved characters in substitutions
-  * `j`: escapes Java Script string literal reserved characters in substitutions
+  * `j`: escapes !JavaScript string literal reserved characters in substitutions
   * `n`: writes an empty string for `nil` values in substitution expressions
   * `e`: writes an empty string for substitution expressions with a runtime error; if absent, a runtime error is propagated to the caller
 
@@ -85,7 +85,7 @@ Escapes XML reserved characters in a string and returns the escaped string. More
 
 == `httpd.escape_js (string)` ==
 
-Escapes Java Script string literal reserved characters in a string and returns the escaped string. More specifically, the following characters are escaped:
+Escapes !JavaScript string literal reserved characters in a string and returns the escaped string. More specifically, the following characters are escaped:
 
 || *Character* || *Escape* ||
 || Backspace || `\b` ||
