@@ -24,6 +24,6 @@ The handlers can be added independently.
 mod_lwt provides several configuration directives. These directives can be used both in the server configuration and in the per-directory configuration. Use of these directives in a `.htaccess` file requires `AllowOverride Options`.
 
 || *Directive* || *Type* || *Default* || *Description* ||
-|| `LuaPath` || `string` || Lua default || The `LuaPath` directive configures the Lua path. See the [http://www.lua.org/manual/5.1/manual.html#5.3 Lua documentation] for information on the workings of the Lua path. ||
+|| `LuaPath` || `string` || Lua default || The `LuaPath` directive configures the Lua path. If the argument begins with `+`, the remainder of the argument is appended to the current Lua path; otherwise, the argument replaces the current Lua path. See the [http://www.lua.org/manual/5.1/manual.html#5.3 Lua documentation] for information on the workings of the Lua path. ||
 || `LuaCPath` || `string` || Lua default || Like `LuaPath`, but configures the Lua C path instead. || 
 || `LuaErrorOutput` || `On` or `Off` || `On` || Determines whether a diagnostic information formatted in HTML is written to the HTTP response when a Lua syntax error or runtime error is encountered while loading or running the Lua script. This directive has no effect in the `lwt-wsapi` handler. ||
