@@ -1,11 +1,11 @@
 #summary Explains how to compile and install LWT.
 #labels Phase-Deploy
 
-<wiki:toc max_depth="2" />
-
 = Introduction =
 
 This page describes the installation of LWT on an Ubuntu Linux system. You may have to modify these instructions and the makefiles in order to compile and install LWT on other systems.
+
+<wiki:toc max_depth="2" />
 
 = Checkout =
 
