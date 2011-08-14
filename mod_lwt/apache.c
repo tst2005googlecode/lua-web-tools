@@ -1301,10 +1301,32 @@ apr_status_t lwt_apache_set_module_path (lua_State *L, const char *path,
 			return APR_EGENERAL;
 		}
 		if (path) {
+			if (path[0] == '+') {
+				lua_getfield(L, -1, "path");
+				if (lua_isstring(L, -1)) {
+					path = apr_pstrcat(r->pool,
+							lua_tostring(L, -1),
+							";", &path[1], NULL);
+				} else {
+					path = &path[1];
+				}
+				lua_pop(L, 1);
+			}
 			lua_pushstring(L, path);
 			lua_setfield(L, -2, "path");
 		}
 		if (cpath) {
+			if (cpath[0] == '+') {
+				lua_getfield(L, -1, "cpath");
+				if (lua_isstring(L, -1)) {
+					cpath = apr_pstrcat(r->pool,
+							lua_tostring(L, -1),
+							";", &cpath[1], NULL);
+				} else {
+					cpath = &cpath[1];
+				}
+				lua_pop(L, 1);
+			}
 			lua_pushstring(L, cpath);
 			lua_setfield(L, -2, "cpath");
 		}
