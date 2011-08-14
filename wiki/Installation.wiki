@@ -156,7 +156,7 @@ Create a basic test page in `/var/www/test.lua`:
 {{{
 require "httpd"
 
-local request_fields = { "protocol", "hostname", "path", "path_info", "args",
+local request_fields = { "uri", "protocol", "hostname", "path", "path_info", "args",
                 "method", "filename", "filedir", "user", "auth_type",
                 "local_ip", "remote_ip" }
 
