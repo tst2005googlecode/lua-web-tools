@@ -142,7 +142,7 @@ Writes `value` to the HTTP response body, formatted in HTML. The function handle
 
 == `httpd.match (path_info, ...)` ==
 
-Matches `path_info` against the patterns following it and returns the captured values of the first matching pattern. Matched empty captures in the matching pattern, i.e. `()`, are returned as `nil`. The idiom for using this function is
+Matches `path_info` against the patterns following it and returns the captured values of the first matching pattern. Empty captures in the matching pattern, i.e. `()`, are returned as `nil`. The idiom for using this function is
 
 {{{
 a, b, c = httpd.match(request.path_info,
