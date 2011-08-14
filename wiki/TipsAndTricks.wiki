@@ -1,0 +1,63 @@
+#summary Tips & Tricks for using LWT.
+
+= Introduction =
+
+This page provides tips and tricks ("best pratices") for using Lua Web Tools.
+
+<wiki:toc max_depth="1" />
+
+= Web Project Structure =
+
+The following structure works well in practice:
+
+{{{
+<DocumentRoot>
+    modules/
+       modulex.lua
+       moduley.lua
+    templates/
+       template1.html
+       template2.html
+    request1.lua
+    request2.lua
+}}}
+
+The `modules` and `templates` directories are blocked from direct web access using a `.htaccess` file such as:
+
+{{{
+Order Deny,Allow
+Deny From All
+}}}
+
+The Lua path is extended to include the `modules` directory, using the !LuaPath directive. Shared logic is placed in modules; page-specific logic goes into the request scripts.
+
+{{{
+LuaPath +<DocumentRoot>/modules
+}}}
+
+A typical request script is structured as follows:
+
+{{{
+require "httpd"
+require "modulex"
+
+request, args = ...
+
+-- Process arguments
+name = httpd.match(request.path_info, "^/(%w+)$")
+if not name then return 404 end -- not found
+value = tonumber(args.value)
+
+-- Process
+if request.method == "POST" then
+	if not value then return 400 end -- bad request
+	modulex.set_value(name, value)
+end
+
+-- Prepare data for rendering
+values = modulex.read_values(name)
+
+-- Render
+httpd.set_content_type("text/html; charset=utf-8")
+httpd.write_template(request.filedir .. "templates/template1.html")
+}}}
