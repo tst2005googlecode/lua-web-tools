@@ -15,7 +15,7 @@ AddHandler lwt .lua
 AddHandler lwt-wsapi .ws
 }}}
 
-These directives associates the `lwt` and `lwt-wsapi` handlers with the `.lua` and `.ws` file extensions. Requests for files ending in `.lua` are passed to the `lwt` handler; requeests for files ending in `.ws` are passed to the `lwt-wsapi` handler.
+These directives associates the `lwt` and `lwt-wsapi` handlers with the `.lua` and `.ws` file extensions. Requests for files ending in `.lua` are passed to the `lwt` handler; requests for files ending in `.ws` are passed to the `lwt-wsapi` handler.
 
 The handlers can be added independently.
 
