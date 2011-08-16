@@ -143,7 +143,7 @@ static int args_fh (lua_State *L, request_rec *r) {
 }	
 
 static int method_fh (lua_State *L, request_rec *r) {
-	if (r->args != NULL) {
+	if (r->method != NULL) {
 		lua_pushstring(L, r->method);
 	} else {
 		lua_pushnil(L);
