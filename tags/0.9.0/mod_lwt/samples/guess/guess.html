@@ -1,0 +1,33 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="UTF-8" />
+	<title>Guess the Number</title>
+</head>
+
+<body onload="document.getElementById('guess').focus();">
+	<h1>Guess the Number</h1>
+
+	<l:if cond="#game.history > 0">
+	<h2>Guess History</h2>
+	<ul>
+		<l:for names="_, entry" in="ipairs(game.history)">
+		<li>${entry.guess} &ndash; ${entry.outcome == "low" and "too low" or entry.outcome == "high" and "too high" or "found"}</li>
+		</l:for>
+	</ul>
+	</l:if>
+
+	<form method="post">
+	<input type="hidden" name="game_id" value="${game_id}" />
+	<l:if cond="outcome ~= 'found'">
+	<h2>Make a Guess</h2>
+	<input id="guess" type="text" name="guess" size="4" /> (1 &ndash; 1000) <input type="submit" value="Guess" />		
+	<l:else />
+	<h2>Congratulations</h2>
+	<p>You found the number with ${#game.history} ${#game.history ~= 1 and "guesses" or "guess"}.</p>
+	<input type="submit" name="new" value="New Game" />
+	</l:if>
+	</form>
+</body>
+
+</html>
