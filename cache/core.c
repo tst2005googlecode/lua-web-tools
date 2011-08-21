@@ -255,14 +255,14 @@ static void decode (lua_State *L, cache_buffer *B, backref_rec *br) {
 		break;	
 
 	case LUA_TTABLE + 64:
-		/* get backreference */
+		/* get backref */
 		avail(L, B, sizeof(nu));
 		memcpy(&nu, &B->b[B->pos], sizeof(nu));
 		B->pos += sizeof(nu);
 		u = be32toh(nu);
 		lua_rawgeti(L, br->index, (int) u);
 		if (lua_isnil(L, -1)) {
-			luaL_error(L, "decoding error: bad backreference");
+			luaL_error(L, "decoding error: bad backref");
 		}
 		break;
 
@@ -329,7 +329,7 @@ int cache_encode (lua_State *L) {
 	lua_setmetatable(L, -2);
 	B->b = malloc(CACHE_BUFFER_INITSIZE);
 	if (B->b == NULL) {
-		luaL_error(L, "out of memory");
+		luaL_error(L, "encoding error: out of memory");
 	}
 	B->capacity = CACHE_BUFFER_INITSIZE;
 
