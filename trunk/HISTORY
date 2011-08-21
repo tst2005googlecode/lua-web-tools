@@ -1,6 +1,14 @@
 LWT Release Notes
 -----------------
 
+* Release 0.9.1
+
+CHANGE: Data read from and written to memcached is now passed directly in the
+cache buffer to and from the decoding and encoding functions, eliminating the
+Lua string copy (and Lua buffer) overhead. Custom decoders unable to consume
+the cache buffer directly must invoke tostring() as a result of this change.
+
+
 * Release 0.9.0 (2011-08-19)
 
 Initial beta release.

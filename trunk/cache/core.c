@@ -16,30 +16,21 @@
 #define CACHE_BUFFER_INITSIZE 4096
 
 /*
- * Buffer metatable.
+ * Backref record.
  */
-#define CACHE_BUFFER_METATABLE "cache_buffer"
-
+typedef struct backref_rec {
+	int index;
+	int cnt;
+} backref_rec;
 
 /*
- * Buffer record.
+ * Frees the memory associated with a cache buffer.
  */
-typedef struct buf_rec {
-	char *b;
-	size_t pos;
-	size_t capacity;
-	int table_index;
-	int table_count;
-} buf_rec;
+static int buffer_free (lua_State *L) {
+	cache_buffer *B;
 
-/*
- * Frees the memory associated with a buffer record.
- */
-static int buf_free (lua_State *L) {
-	buf_rec *B;
-
-	B = (buf_rec *) luaL_checkudata(L, -1, CACHE_BUFFER_METATABLE);
-	if (B->b) {
+	B = (cache_buffer *) luaL_checkudata(L, -1, CACHE_BUFFER_METATABLE);
+	if (B->b != NULL) {
 		free(B->b);
 		B->b = NULL;
 	}
@@ -47,9 +38,24 @@ static int buf_free (lua_State *L) {
 }
 
 /*
+ * Returns the contents of a cache buffer as a string.
+ */
+static int buffer_tostring (lua_State *L) {
+	cache_buffer *B;
+	
+	B = (cache_buffer *) luaL_checkudata(L, -1, CACHE_BUFFER_METATABLE);
+	if (B->b != NULL) {
+		lua_pushlstring(L, B->b, B->pos);
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+/*
  * Ensures the requried buffer capacity.
  */
-static void require (lua_State *L, buf_rec *B, size_t cnt) {
+static void require (lua_State *L, cache_buffer *B, size_t cnt) {
 	char *new;
 
 	/* nothing to do? */
@@ -73,7 +79,7 @@ static void require (lua_State *L, buf_rec *B, size_t cnt) {
 /*
  * Returns whether there is space available for reading in a buffer.
  */
-static void avail (lua_State *L, buf_rec *B, size_t cnt) {
+static void avail (lua_State *L, cache_buffer *B, size_t cnt) {
 	if (B->pos + cnt > B->capacity) {
 		luaL_error(L, "decding error: input ends unexpectedly");
 	}
@@ -98,7 +104,7 @@ static int supported (lua_State *L, int index) {
 /*
  * Encodes the value at the specified index.
  */	
-static void encode (lua_State *L, buf_rec *B, int index) {
+static void encode (lua_State *L, cache_buffer *B, backref_rec *br, int index) {
 	double d;
 	uint32_t u, nu, narr, nrec;
 	size_t narr_pos, nrec_pos;
@@ -135,15 +141,15 @@ static void encode (lua_State *L, buf_rec *B, int index) {
 
 		/* test if the table has already been encoded */
 		lua_pushvalue(L, index);
-		lua_rawget(L, B->table_index);
+		lua_rawget(L, br->index);
 		if (lua_isnil(L, -1)) {
-			/* index table for possible backreferences */
+			/* store table for backrefs */
 			lua_pop(L, 1);
 			lua_pushvalue(L, index);
-			lua_pushinteger(L, ++B->table_count);
-			lua_rawset(L, B->table_index);
+			lua_pushinteger(L, ++br->cnt);
+			lua_rawset(L, br->index);
 		} else {
-			/* encode backreference */
+			/* encode backref */
 			require(L, B, 1 + sizeof(nu));
 			B->b[B->pos++] = (char) LUA_TTABLE + 64;
 			u = (uint32_t) lua_tointeger(L, -1);
@@ -174,8 +180,8 @@ static void encode (lua_State *L, buf_rec *B, int index) {
 				} else {
 					nrec++;
 				}
-				encode(L, B, lua_gettop(L) - 1);
-				encode(L, B, lua_gettop(L));
+				encode(L, B, br, lua_gettop(L) - 1);
+				encode(L, B, br, lua_gettop(L));
 			}	
 			lua_pop(L, 1);
 		}
@@ -193,7 +199,7 @@ static void encode (lua_State *L, buf_rec *B, int index) {
 /*
  * Decodes the value in the specified buffer.
  */
-static void decode (lua_State *L, buf_rec *B) {
+static void decode (lua_State *L, cache_buffer *B, backref_rec *br) {
 	double d;
 	uint32_t nu, u, narr, nrec;
 
@@ -236,14 +242,14 @@ static void decode (lua_State *L, buf_rec *B) {
 		avail(L, B, 2 * (narr + nrec));
 		lua_createtable(L, narr, nrec);
 
-		/* store the table for backreferences */
+		/* store the table for backrefs */
 		lua_pushvalue(L, -1);
-		lua_rawseti(L, B->table_index, ++B->table_count);
+		lua_rawseti(L, br->index, ++br->cnt);
 
 		/* decode table content */
 		for (nrec = nrec + narr; nrec > 0; nrec--) {
-			decode(L, B);
-			decode(L, B);
+			decode(L, B, br);
+			decode(L, B, br);
 			lua_rawset(L, -3);
 		}
 		break;	
@@ -254,7 +260,7 @@ static void decode (lua_State *L, buf_rec *B) {
 		memcpy(&nu, &B->b[B->pos], sizeof(nu));
 		B->pos += sizeof(nu);
 		u = be32toh(nu);
-		lua_rawgeti(L, B->table_index, (int) u);
+		lua_rawgeti(L, br->index, (int) u);
 		if (lua_isnil(L, -1)) {
 			luaL_error(L, "decoding error: bad backreference");
 		}
@@ -306,58 +312,48 @@ static const luaL_Reg functions[] = {
  */
 
 int cache_encode (lua_State *L) {
-	buf_rec *B;
+	backref_rec br;
+	cache_buffer *B;
 
 	luaL_checkany(L, 1);
 
-	/* create buffer */
-	B = (buf_rec *) lua_newuserdata(L, sizeof(buf_rec));
-	memset(B, 0, sizeof(buf_rec));
+	/* prepare backref record */
+	memset(&br, 0, sizeof(backref_rec));
+	lua_newtable(L);
+	br.index = lua_gettop(L);
+
+	/* prepare cache buffer */
+	B = (cache_buffer *) lua_newuserdata(L, sizeof(cache_buffer));
+	memset(B, 0, sizeof(cache_buffer));
 	luaL_getmetatable(L, CACHE_BUFFER_METATABLE);
 	lua_setmetatable(L, -2);
 	B->b = malloc(CACHE_BUFFER_INITSIZE);
-	if (!B->b) {
+	if (B->b == NULL) {
 		luaL_error(L, "out of memory");
 	}
 	B->capacity = CACHE_BUFFER_INITSIZE;
 
-	/* create backreference table */
-	lua_newtable(L);
-	B->table_index = lua_gettop(L);
-
 	/* encode */
-	encode(L, B, 1);
-
-	/* push result */
-	lua_pushlstring(L, B->b, B->pos);
-
-	/* free buffer */
-	free(B->b);
-	B->b = NULL;
+	encode(L, B, &br, 1);
 
 	return 1;
 }
 
 int cache_decode (lua_State *L) {
-	const char *b;
-	size_t s;
-	buf_rec B;
+	cache_buffer *B;
+	backref_rec br;
 
-	b = luaL_checkstring(L, 1);
-	s = lua_objlen(L, 1);
-	lua_settop(L, 1);
+	/* prepare cache buffer */
+	B = (cache_buffer *) luaL_checkudata(L, 1, CACHE_BUFFER_METATABLE);
+	B->pos = 0;
 
-	/* init buffer */
-	memset(&B, 0, sizeof(B));
-	B.b = (char *) b;
-	B.capacity = s;
-
-	/* create backreference table */
+	/* prepare backref record */
+	memset(&br, 0, sizeof(backref_rec));
 	lua_newtable(L);
-	B.table_index = lua_gettop(L);
+	br.index = lua_gettop(L);
 
 	/* deocde */
-	decode(L, &B);
+	decode(L, B, &br);
 
 	return 1;
 }
@@ -371,8 +367,10 @@ int luaopen_cache_core (lua_State *L) {
 	
 	/* create buffer metatable */
 	luaL_newmetatable(L, CACHE_BUFFER_METATABLE);
-	lua_pushcfunction(L, buf_free);
+	lua_pushcfunction(L, buffer_free);
 	lua_setfield(L, -2, "__gc");
+	lua_pushcfunction(L, buffer_tostring);
+	lua_setfield(L, -2, "__tostring");
 	lua_pop(L, 1);
 
         return 1;
