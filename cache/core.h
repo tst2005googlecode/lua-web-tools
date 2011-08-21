@@ -7,7 +7,6 @@
 
 #include <lua.h>
 
-
 /* cache fields */
 #define CACHE_FDRIVER "driver"
 #define CACHE_FMAP "map"
@@ -22,6 +21,20 @@
 #define CACHE_FDEC "dec"
 #define CACHE_FFLUSH "flush"
 #define CACHE_FCLOSE "close"
+
+/*
+ * Buffer metatable.
+ */
+#define CACHE_BUFFER_METATABLE "cache_buffer"
+
+/*
+ * Buffer record.
+ */
+typedef struct cache_buffer {
+        char *b;
+        size_t pos;
+        size_t capacity;
+} cache_buffer;
 
 /*
  * Encodes a value. The function raises a Lua error if the encoding fails.

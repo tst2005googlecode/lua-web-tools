@@ -2,10 +2,10 @@
  * Provides the cache memcached module. See LICENSE for license terms.
  */
 
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
-#include <stdint.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/tcp.h>
@@ -24,6 +24,11 @@
 #define CACHE_MEMCACHED_EXTRAS 1
 #define CACHE_MEMCACHED_KEY 2
 #define CACHE_MEMCACHED_VALUE 4
+
+/*
+ * Response flags.
+ */
+#define CACHE_MEMCACHED_STRING 1
 
 /*
  * Cache record.
@@ -177,7 +182,8 @@ static int get_socket (lua_State *L, memcached_rec *m, int index) {
 /*
  * Reads a response from a memcached server.
  */
-static int read_response (lua_State *L, int fd, uint16_t *status, int parts) {
+static int read_response (lua_State *L, int fd, uint16_t *status, int parts,
+		int flags) {
 	protocol_binary_response_no_extras response;
 	size_t rtotal;
 	ssize_t r;
@@ -185,6 +191,7 @@ static int read_response (lua_State *L, int fd, uint16_t *status, int parts) {
 	uint16_t keylen;
 	uint32_t bodylen;
 	luaL_Buffer B;
+	cache_buffer *b;
 	int nret = 0;
 
 	/* receive */
@@ -259,21 +266,29 @@ static int read_response (lua_State *L, int fd, uint16_t *status, int parts) {
 
 	/* value */
 	if (bodylen > extlen + keylen) {
-		luaL_buffinit(L, &B);
 		rtotal = bodylen - (extlen + keylen);
+		b = (cache_buffer *) lua_newuserdata(L, sizeof(cache_buffer));
+		memset(b, 0, sizeof(cache_buffer));
+		luaL_getmetatable(L, CACHE_BUFFER_METATABLE);
+		lua_setmetatable(L, -2);
+		b->b = (char *) malloc(rtotal);
+		if (b->b == NULL) {
+			luaL_error(L, "out of memory");
+		}
+		b->capacity = rtotal;
 		while (rtotal > 0) {
 			r = rtotal;
-			if (r > LUAL_BUFFERSIZE) {
-				r = LUAL_BUFFERSIZE;
-			}
-			if ((r = read(fd, luaL_prepbuffer(&B), r)) == -1) {
+			if ((r = read(fd, &b->b[b->pos], r)) == -1) {
 				luaL_error(L, "error reading response");
 			}
-			luaL_addsize(&B, r);
+			b->pos += r;
 			rtotal -= r;
 		}
-		luaL_pushresult(&B);
 		if (parts & CACHE_MEMCACHED_VALUE) {
+			if (flags & CACHE_MEMCACHED_STRING) {
+				lua_pushlstring(L, b->b, b->pos);
+				lua_replace(L, -2);
+			}
 			nret++;
 		} else {
 			lua_pop(L, 1);
@@ -323,7 +338,7 @@ static int get (lua_State *L) {
 	lua_rawgeti(L, LUA_REGISTRYINDEX, m->decode_index);
 
 	/* read response */
-	nret = read_response(L, fd, &status, CACHE_MEMCACHED_VALUE);
+	nret = read_response(L, fd, &status, CACHE_MEMCACHED_VALUE, 0);
 	switch (status) {
 	case PROTOCOL_BINARY_RESPONSE_SUCCESS:
 		if (nret != 1) {
@@ -348,6 +363,7 @@ static int set (lua_State *L) {
 	memcached_rec *m;
 	const char *key, *value;
 	size_t keylen, valuelen;
+	cache_buffer *b;
 	double expiration;
 	protocol_binary_request_set srequest;
 	protocol_binary_request_delete drequest;
@@ -371,10 +387,12 @@ static int set (lua_State *L) {
 		lua_pushvalue(L, 3);
 		lua_call(L, 1, 1);
 		if (!lua_isstring(L, -1)) {
-			luaL_error(L, "encode function returns bad encoding");
+			b = luaL_checkudata(L, -1, CACHE_BUFFER_METATABLE);
+			value = b->b;
+			valuelen = b->pos;
+		} else {
+			value = lua_tolstring(L, -1, &valuelen);
 		}
-		value = lua_tostring(L, -1);
-		valuelen = lua_objlen(L, -1);
 
 		/* prepare request */
 		memset(&srequest, 0, sizeof(srequest));
@@ -423,7 +441,7 @@ static int set (lua_State *L) {
 	}
 
 	/* read response */
-	read_response(L, fd, &status, 0);
+	read_response(L, fd, &status, 0, 0);
 	switch (status) {
 	case PROTOCOL_BINARY_RESPONSE_SUCCESS:
 		lua_pushboolean(L, 1);
@@ -487,7 +505,8 @@ static int increment (lua_State *L) {
 	}
 
 	/* read response */
-	nret = read_response(L, fd, &status, CACHE_MEMCACHED_VALUE);
+	nret = read_response(L, fd, &status, CACHE_MEMCACHED_VALUE,
+			CACHE_MEMCACHED_STRING);
 	switch (status) {
 	case PROTOCOL_BINARY_RESPONSE_SUCCESS:
 		if (nret != 1) {
@@ -538,7 +557,7 @@ static int flush (lua_State *L) {
 	}
 
 	/* read response */
-	read_response(L, fd, &status, 0);
+	read_response(L, fd, &status, 0, 0);
 	switch (status) {
 	case PROTOCOL_BINARY_RESPONSE_SUCCESS:
 		return 0;
@@ -589,7 +608,8 @@ static int stat (lua_State *L) {
 	lua_newtable(L);
 	while (1) {
 		nret = read_response(L, fd, &status, CACHE_MEMCACHED_KEY 
-				| CACHE_MEMCACHED_VALUE);
+				| CACHE_MEMCACHED_VALUE,
+				CACHE_MEMCACHED_STRING);
 		switch (status) {
 		case PROTOCOL_BINARY_RESPONSE_SUCCESS:
 			switch (nret) {
