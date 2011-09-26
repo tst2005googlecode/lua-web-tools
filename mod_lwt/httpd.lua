@@ -23,18 +23,24 @@ local COOKIE_WEEKDAYS = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat",
 local COOKIE_MONTHS = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug",
 		"Sep", "Oct", "Nov", "Dec" }
 
+-- Returns a HTTP date
+function date (time)
+	if not time then return nil end
+	local date = os.date("!*t", time)
+	return string.format("%s, %.2d-%s-%.4d %.2d:%.2d:%.2d GMT",
+			COOKIE_WEEKDAYS[date.wday], date.day,
+			COOKIE_MONTHS[date.month], date.year, date.hour,
+			date.min, date.sec)
+end
+
 -- Add Cookie
 function add_cookie (name, value, expires, path, domain, secure, httponly)
 	local cookie = { }
 	table.insert(cookie, string.format("%s=", name))
 	if value then table.insert(cookie, string.format("%s", value)) end
-	if expires then
-		local date = os.date("!*t", expires)
-		table.insert(cookie, string.format("; expires=%s, %.2d-%s-%.4d "
-				.. "%.2d:%.2d:%.2d GMT",
-				COOKIE_WEEKDAYS[date.wday], date.day,
-				COOKIE_MONTHS[date.month], date.year,
-				date.hour, date.min, date.sec))
+	if expires and expires >= 0 then
+		table.insert(cookie, string.format("; expires=%s",
+				date(expires)))
 	end
 	if path then
 		table.insert(cookie, string.format("; path=%s", path))
