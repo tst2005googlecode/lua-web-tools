@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/tcp.h>
@@ -153,6 +154,14 @@ static int get_socket (lua_State *L, memcached_rec *m, int index) {
 				}
 			}
 
+			/* reuse address */
+			flag = 1;
+			if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &flag,
+					sizeof(flag)) == -1) {
+				close(fd);
+				continue;
+			}
+
 			/* connect */
 			if (connect(fd, rp->ai_addr, rp->ai_addrlen) == -1) {
 				close(fd);
@@ -164,8 +173,8 @@ static int get_socket (lua_State *L, memcached_rec *m, int index) {
 		}
 		if (rp == NULL) {
 			freeaddrinfo(results);
-			luaL_error(L, "error connecting to '%s:%s'", host,
-					port);
+			luaL_error(L, "error connecting to '%s:%s', %s (%d)",
+					host, port, strerror(errno), errno);
 		}
 		freeaddrinfo(results);
 
@@ -638,15 +647,35 @@ static int stat (lua_State *L) {
  */
 static int mclose (lua_State *L) {
 	memcached_rec *m;
+	protocol_binary_request_quit request;
+	int fd;
+	uint16_t status;
 
 	m = luaL_checkudata(L, 1, CACHE_MEMCACHED_METATABLE);
 
 	if (m->sockets_index) {
-		/* close sockets */
+		/* prepare request */
+		memset(&request, 0, sizeof(request));
+		request.message.header.request.magic = PROTOCOL_BINARY_REQ;
+		request.message.header.request.opcode
+				= PROTOCOL_BINARY_CMD_QUIT;
+
+		/* quit and close sockets */
 		lua_rawgeti(L, LUA_REGISTRYINDEX, m->sockets_index);
 		lua_pushnil(L);
 		while (lua_next(L, -2)) {
-			close((int) lua_tointeger(L, -1));
+			fd = (int) lua_tointeger(L, -1);
+			if (write(fd, &request, sizeof(request)) == -1) {
+				luaL_error(L, "error sending request");
+			}
+			read_response(L, fd, &status, 0, 0);
+			if (status != PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+				luaL_error(L, "memcached error %d",
+						(int) status);
+			}
+
+			/* close */
+			close(fd);
 			lua_pop(L, 1);
 			lua_pushvalue(L, -1);
 			lua_pushnil(L);
