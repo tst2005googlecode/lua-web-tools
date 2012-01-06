@@ -24,6 +24,8 @@ for key, value in httpd.pairs(t) do body end
 
 will iterate over all key-value pairs in the passed APR table. This function is used with the header tables of the `request` value and with the `args` value.
 
+When using Lua 5.2, you can also use the regular `pairs` function instead of `httpd.pairs`.
+
 == `httpd.set_status (status)` ==
 
 Sets the HTTP response status to `status`, a number between 100 and 599.
