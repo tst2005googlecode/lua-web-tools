@@ -1,7 +1,7 @@
 LWT Release Notes
 -----------------
 
-* Release 0.9.1
+* Release 0.9.1 (2012-01-06)
 
 FEATURE: Lua 5.2 compatibility. The regular Lua pairs function can now be used
 to iterate APR tables.
