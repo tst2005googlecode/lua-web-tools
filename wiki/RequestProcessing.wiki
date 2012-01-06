@@ -47,9 +47,9 @@ The `request` value is passed as the first argument to a Lua script. It is a tab
 || `path_info` || Any path information following the requested Lua script, including the beginning slash, e.g. `/additonal/path/segments`. ||
 || `args` || The arguments portion of the URI, e.g. `name=value&name2=value2`. ||
 || `method` || The request method, e.g. `GET` or `POST`. ||
-|| `headers_in` || A table-like userdata value containing the request input headers. In Lua 5.1, use the `httpd.pairs` (function to iterate over this table. ||
-|| `headers_out` || A table-like userdata value containing the request output headers. In Lua 5.1, use the `httpd.pairs` function to iterate over this table. These headers are only transmitted for successful request, i.e. requests returning no value or `nil`. For example, a `Location` header used in a redirect should _not_ go here as these headers would not be transmitted if the script returns a 3xx redirect HTTP status code. ||
-|| `err_headers_out` || A table-like userdata value containing the request output headers. In Lua 5.1, use the `httpd.pairs` function to iterate over this table. These headers are transmitted regardless of the outcome of the request. For example, a `Location` header used in a redirect should go here. || 
+|| `headers_in` || A table-like userdata value containing the request input headers. The table can be iterated with the `httpd.pairs` function (or the regular `pairs` function as of Lua 5.2). ||
+|| `headers_out` || A table-like userdata value containing the request output headers. The table can be iterated with the `httpd.pairs` function (or the regular `pairs` function as of Lua 5.2). These headers are only transmitted for successful request, i.e. requests returning no value or `nil`. For example, a `Location` header used in a redirect should _not_ go here as these headers would not be transmitted if the script returns a 3xx redirect HTTP status code. ||
+|| `err_headers_out` || A table-like userdata value containing the request output headers. The table can be iterated with the `httpd.pairs` function (or the regular `pairs` function as of Lua 5.2).  These headers are transmitted regardless of the outcome of the request. For example, a `Location` header used in a redirect should go here. || 
 || `filename` || The qualified filename of the requested Lua script. ||
 || `filedir` || The qualified directory where the requested Lua script resides, including a trailing slash. ||
 || `user` || The authenticated user. ||
@@ -68,7 +68,7 @@ The `args` value is passed as the second argument to a Lua script. It is a table
   # arguments from the URI
   # arguments from the body with a content type of `application/x-www-form-urlencoded` (regular form post), or `multipart/form-data` (typically used for file uploads)
  
-The fields of the `args` value can be accessed by name (e.g. `args.field`) or by iterating over the arguments using the `httpd.pairs` function (or the regular `pairs` function, as of Lua 5.2). The latter method must be used if there are multiple values with the same name in the arguments.
+The fields of the `args` value can be accessed by name (e.g. `args.field`) or by iterating over the arguments using the `httpd.pairs` function (or the regular `pairs` function as of Lua 5.2). The iteration method must be used if there are multiple values with the same name in the arguments.
 
 For uploaded files, the `args` value contains the temporary file name of the uploaded file. Note that these temporary files are deleted at the end of the request.
 
