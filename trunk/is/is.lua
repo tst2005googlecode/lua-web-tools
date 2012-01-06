@@ -2,10 +2,11 @@
 
 module(..., package.seeall)
 
+local core = require "is.core"
+
 -- Imported functions from core
-require "is.core"
-connect = is.core.connect
-timegm = is.core.timegm
+connect = core.connect
+timegm = core.timegm
 
 -- Returns a datetime formatted for the database
 function date (time)
