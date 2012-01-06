@@ -2,6 +2,7 @@
 
 module(..., package.seeall)
 
+local core = require "cache.core"
+
 -- Imported functions from core
-require "cache.core"
-configure = cache.core.configure
+configure = core.configure
