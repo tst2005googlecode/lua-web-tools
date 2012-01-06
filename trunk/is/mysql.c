@@ -14,6 +14,16 @@
 #include "core.h"
 #include "mysql.h"
 
+/*
+ * Lua 5.1 compatibility.
+ */
+#if LUA_VERSION_NUM < 502
+#define lua_rawlen(L, i) lua_objlen(L, (i))
+#endif
+
+/*
+ * MySQL parameters.
+ */
 #define IS_MYSQL_METATABLE "is_mysql"
 #define IS_MYSQL_MAXPARAM 128
 
@@ -814,7 +824,7 @@ static int execute_direct (lua_State *L) {
 	}
 
         /* execute */
-	if (mysql_real_query(m->mysql, sql, lua_objlen(L, 2)) != 0) {
+	if (mysql_real_query(m->mysql, sql, lua_rawlen(L, 2)) != 0) {
 		error(L, m);
 	}
 	if (mysql_field_count(m->mysql) > 0) {
@@ -864,11 +874,12 @@ static const luaL_Reg functions[] = {
  */
 
 int luaopen_is_mysql (lua_State *L) {
-	const char *modname;
-	
 	/* create driver */
-	modname = luaL_checkstring(L ,1);
-	luaL_register(L, modname, functions);
+	#if LUA_VERSION_NUM >= 502
+	luaL_newlib(L, functions);
+	#else
+	luaL_register(L, luaL_checkstring(L, 1), functions);
+	#endif
 
 	/* create metatable */
 	luaL_newmetatable(L, IS_MYSQL_METATABLE);

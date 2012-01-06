@@ -138,7 +138,7 @@ const char *lwt_util_escape_js (apr_pool_t *pool, const char *s) {
 
 int lwt_util_traceback (lua_State *L) {
 	/* get the traceback function from the debug module */
-	lua_getfield(L, LUA_GLOBALSINDEX, LUA_DBLIBNAME);
+	lua_getglobal(L, LUA_DBLIBNAME);
 	if (!lua_istable(L, -1)) {
 		lua_pop(L, 1);
 		return 1;

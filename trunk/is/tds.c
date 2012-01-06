@@ -15,6 +15,16 @@
 #include "core.h"
 #include "tds.h"
 
+/*
+ * Lua 5.1 compatibility.
+ */
+#if LUA_VERSION_NUM < 502
+#define lua_rawlen(L, i) lua_objlen(L, (i))
+#endif
+
+/*
+ * TDS parameters.
+ */
 #define IS_TDS_METATABLE "is_tds"
 #define IS_TDS_ERROR "is_tds_error"
 #define IS_TDS_MESSAGES "is_tds_messages"
@@ -78,7 +88,7 @@ static int msg_handler (DBPROCESS *db, DBINT msgno, int msgstate, int severity,
 		cnt++;
 	}
 	lua_concat(L, cnt);
-	lua_rawseti(L, -2, lua_objlen(L, -2) + 1);
+	lua_rawseti(L, -2, lua_rawlen(L, -2) + 1);
 
 	/* pop message table */
 	lua_pop(L, 1);
@@ -93,7 +103,7 @@ static void clear (lua_State *L) {
 	int cnt;
 
 	lua_getfield(L, LUA_REGISTRYINDEX, IS_TDS_MESSAGES);
-	cnt = lua_objlen(L, -1);
+	cnt = lua_rawlen(L, -1);
 	while (cnt > 0) {
 		lua_pushnil(L);
 		lua_rawseti(L, -2, cnt);
@@ -146,7 +156,7 @@ static int error (lua_State *L) {
 	cnt++;
 
 	/* get messages */
-	for (i = 0; i < lua_objlen(L, -2 - 2 * i); i++) {
+	for (i = 0; i < lua_rawlen(L, -2 - 2 * i); i++) {
 		lua_pushliteral(L, "\n");
 		cnt++;
 		lua_rawgeti(L, -2 - 2 * i - 1, i + 1);
@@ -762,7 +772,7 @@ static int messages (lua_State *L) {
 	lua_getfield(L, LUA_REGISTRYINDEX, IS_TDS_MESSAGES);
 
 	/* create a safe copy */
-	cnt = lua_objlen(L, -1);
+	cnt = lua_rawlen(L, -1);
 	lua_createtable(L, cnt, 0);
 	for (i = 0; i < cnt; i++) {
 		lua_rawgeti(L, -2, i + 1);
@@ -817,11 +827,12 @@ static pthread_mutex_t dbinitmutex = PTHREAD_MUTEX_INITIALIZER;
  */
 
 int luaopen_is_tds (lua_State *L) {
-	const char *modname;
-	
 	/* create driver */
-	modname = luaL_checkstring(L ,1);
-	luaL_register(L, modname, functions);
+	#if LUA_VERSION_NUM >= 502
+	luaL_newlib(L, functions);
+	#else
+	luaL_register(L, luaL_checkstring(L, 1), functions);
+	#endif
 
 	/* create metatable */
 	luaL_newmetatable(L, IS_TDS_METATABLE);

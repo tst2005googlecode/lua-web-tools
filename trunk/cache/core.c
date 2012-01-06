@@ -11,6 +11,13 @@
 #include "core.h"
 
 /*
+ * Lua 5.1 compatibility.
+ */
+#if LUA_VERSION_NUM < 502
+#define lua_rawlen(L, i) lua_objlen(L, (i))
+#endif
+
+/*
  * Initial size of a buffer.
  */
 #define CACHE_BUFFER_INITSIZE 4096
@@ -125,7 +132,7 @@ static void encode (lua_State *L, cache_buffer *B, backref_rec *br, int index) {
 		break;
 		
 	case LUA_TSTRING:
-		u = (uint32_t) lua_objlen(L, index);
+		u = (uint32_t) lua_rawlen(L, index);
 		require(L, B, 1 + sizeof(nu) + u);
 		B->b[B->pos++] = (char) LUA_TSTRING;
 		nu = htobe32(u);
@@ -359,11 +366,12 @@ int cache_decode (lua_State *L) {
 }
 
 int luaopen_cache_core (lua_State *L) {
-        const char *modname;
-
-        /* register functions */
-        modname = luaL_checkstring(L, 1);
-        luaL_register(L, modname, functions);
+	/* register functions */
+	#if LUA_VERSION_NUM >= 502
+	luaL_newlib(L, functions);
+	#else
+	luaL_register(L, luaL_checkstring(L, 1), functions);
+	#endif
 	
 	/* create buffer metatable */
 	luaL_newmetatable(L, CACHE_BUFFER_METATABLE);

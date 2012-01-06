@@ -3,12 +3,22 @@ LWT Release Notes
 
 * Release 0.9.1
 
+FEATURE: Lua 5.2 compatibility. The regular Lua pairs function can now be used
+to iterate APR tables.
+
 CHANGE: Data read from and written to memcached is now passed directly in the
 cache buffer to and from the decoding and encoding functions, eliminating the
 Lua string copy (and Lua buffer) overhead. Custom decoders unable to consume
 the cache buffer directly must invoke tostring() as a result of this change.
 
+FIX: httpd.add_cookie() would not treat a negative expires argument as
+documented.
+
+FIX: Send quit command to memecached before closing a connection.
+
+FIX: Adjusted mod_lwt makefile to explicitly link with librt.
+
 
 * Release 0.9.0 (2011-08-19)
 
-Initial beta release.
+Initial public release.
