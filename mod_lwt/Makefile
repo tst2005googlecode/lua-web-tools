@@ -6,7 +6,7 @@ LUA_INSTALL = /usr/local/share/lua/5.1
 all: mod_lwt.la
 
 mod_lwt.la: mod_lwt.c util.h util.c template.h template.c apache.h apache.c
-	${APACHE2_BIN}/${APXS} -c -Wc,-Wall -I${LUA_INCLUDE} -llua5.1 mod_lwt.c util.c template.c apache.c
+	${APACHE2_BIN}/${APXS} -c -Wc,-Wall -I${LUA_INCLUDE} -llua52 -lrt mod_lwt.c util.c template.c apache.c
 
 install:
 	${APACHE2_BIN}/${APXS} -i -a mod_lwt.la

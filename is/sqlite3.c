@@ -11,6 +11,16 @@
 #include "core.h"
 #include "sqlite3.h"
 
+/*
+ * Lua 5.1 compatibility.
+ */
+#if LUA_VERSION_NUM < 502
+#define lua_rawlen(L, i) lua_objlen(L, (i))
+#endif
+
+/*
+ * SQLite3 parameters.
+ */
 #define IS_SQLITE3_METATABLE "is_sqlite3"
 
 /*
@@ -137,7 +147,7 @@ static int execute (lua_State *L) {
 		lua_error(L);
 	}
 	sql = luaL_checkstring(L, 2);
-	sql_length = lua_objlen(L, 2);
+	sql_length = lua_rawlen(L, 2);
 
 	/* finalize last statement */	
 	if (s->stmt) {
@@ -181,7 +191,7 @@ static int execute (lua_State *L) {
 
 		case LUA_TSTRING:
 			if (sqlite3_bind_text(s->stmt, i + 1, lua_tostring(
-					L, i + 3), lua_objlen(L, i + 3),
+					L, i + 3), lua_rawlen(L, i + 3),
 					SQLITE_TRANSIENT) != SQLITE_OK) {
 				error(L, s);
 			}
@@ -616,11 +626,12 @@ static const luaL_Reg functions[] = {
  */
 
 int luaopen_is_sqlite3 (lua_State *L) {
-	const char *modname;
-	
 	/* create driver */
-	modname = luaL_checkstring(L ,1);
-	luaL_register(L, modname, functions);
+	#if LUA_VERSION_NUM >= 502
+	luaL_newlib(L, functions);
+	#else
+	luaL_register(L, luaL_checkstring(L, 1), functions);
+	#endif
 
 	/* create metatable */
 	luaL_newmetatable(L, IS_SQLITE3_METATABLE);

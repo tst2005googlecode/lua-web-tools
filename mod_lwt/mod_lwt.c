@@ -152,7 +152,7 @@ static void *lua_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
 
 	pool = (apr_pool_t *) ud;
 	if (nsize != 0) {
-		if (osize != 0) {
+		if (ptr != NULL) {
 			if (nsize <= osize) {
 				block = ptr;
 			} else {
@@ -225,9 +225,14 @@ static int handler (request_rec *r) {
 
 	/* register modules */
 	luaL_openlibs(L);
+	#if LUA_VERSION_NUM >= 502
+	luaL_requiref(L, LWT_APACHE_MODULE, luaopen_apache, 0);
+	lua_pop(L, 1);
+	#else
 	lua_pushcfunction(L, luaopen_apache);
 	lua_pushstring(L, LWT_APACHE_MODULE);
 	lua_call(L, 1, 0);
+	#endif
 
         /* apply configuration */
 	server_conf = (lwt_conf_t *) ap_get_module_config(

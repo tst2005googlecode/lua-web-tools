@@ -104,11 +104,12 @@ static const luaL_Reg functions[] = {
  */
 
 int luaopen_is_core (lua_State *L) {
-	const char *modname;
-
 	/* register functions */	
-	modname = luaL_checkstring(L, 1);
-	luaL_register(L, modname, functions);	
+	#if LUA_VERSION_NUM >= 502
+	luaL_newlib(L, functions);
+	#else
+	luaL_register(L, luaL_checkstring(L, 1), functions);	
+	#endif
 
 	return 1;
 }

@@ -17,6 +17,16 @@
 #include "core.h"
 #include "memcached.h"
 
+/*
+ * Lua 5.1 compatibility.
+ */
+#if LUA_VERSION_NUM < 502
+#define lua_rawlen(L, i) lua_objlen(L, (i))
+#endif
+
+/*
+ * Memcached parameters.
+ */
 #define CACHE_MEMCACHED_METATABLE "cache_memcached"
 
 /*
@@ -324,7 +334,7 @@ static int get (lua_State *L) {
 		luaL_error(L, "memcached connector is closed");
 	}
 	key = luaL_checkstring(L, 2);
-	keylen = lua_objlen(L, 2);
+	keylen = lua_rawlen(L, 2);
 
 	/* prepare request */
 	memset(&request, 0, sizeof(request));
@@ -385,7 +395,7 @@ static int set (lua_State *L) {
 		luaL_error(L, "memcached connector is closed");
 	}
 	key = luaL_checkstring(L, 2);
-	keylen = lua_objlen(L, 2);
+	keylen = lua_rawlen(L, 2);
 	luaL_checkany(L, 3);
 	expiration = luaL_optnumber(L, 4, 0);
 
@@ -485,7 +495,7 @@ static int increment (lua_State *L) {
 		luaL_error(L, "memcached connector is closed");
 	}
 	key = luaL_checkstring(L, 2);
-	keylen = lua_objlen(L, 2);
+	keylen = lua_rawlen(L, 2);
 	delta = luaL_optnumber(L, 3, 1);
 	initial = luaL_optnumber(L, 4, 1);
 	expiration = luaL_optnumber(L, 5, 0);
@@ -594,7 +604,7 @@ static int stat (lua_State *L) {
 	}
 	luaL_checkstring(L, 2);
 	key = luaL_optstring(L, 3, NULL);
-	keylen = lua_objlen(L, 3);
+	keylen = lua_rawlen(L, 3);
 
 	/* prepare request */
 	memset(&request, 0, sizeof(request));
@@ -736,11 +746,12 @@ static int tostring (lua_State *L) {
  */
 
 int luaopen_cache_memcached (lua_State *L) {
-        const char *modname;
-
-        /* register functions */
-        modname = luaL_checkstring(L, 1);
-        luaL_register(L, modname, functions);
+	/* register functions */
+	#if LUA_VERSION_NUM >= 502
+	luaL_newlib(L, functions);
+	#else
+	luaL_register(L, luaL_checkstring(L, 1), functions);
+	#endif
 
 	/* create cache metatable */
 	luaL_newmetatable(L, CACHE_MEMCACHED_METATABLE);

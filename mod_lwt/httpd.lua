@@ -2,20 +2,22 @@
 
 module(..., package.seeall)
 
+local core = require("httpd.core")
+
 -- Imported functions from core
 gpairs = pairs
-pairs = httpd.core.pairs
-set_status = httpd.core.set_status
-set_content_type = httpd.core.set_content_type
-add_header = httpd.core.add_header
-escape_uri = httpd.core.escape_uri
-escape_xml = httpd.core.escape_xml
-escape_js = httpd.core.escape_js
-input = httpd.core.input
-output = httpd.core.output
-debug = httpd.core.debug
-notice = httpd.core.notice
-err = httpd.core.err
+pairs = core.pairs
+set_status = core.set_status
+set_content_type = core.set_content_type
+add_header = core.add_header
+escape_uri = core.escape_uri
+escape_xml = core.escape_xml
+escape_js = core.escape_js
+input = core.input
+output = core.output
+debug = core.debug
+notice = core.notice
+err = core.err
 
 -- Cookie weekdays and months
 local COOKIE_WEEKDAYS = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat",
@@ -56,7 +58,7 @@ end
 		
 -- Write template
 function write_template (filename, flags, file)
-	return httpd.core.write_template(filename, flags, not file and output
+	return core.write_template(filename, flags, not file and output
 			or file ~= true and file or nil)
 end
 	
@@ -106,9 +108,9 @@ function dump (v, visited)
                 end
                 write("</tablebody></table>\r\n")
         elseif type(v) == "string" then
-                httpd.write("\"", escape_xml(v), "\"")
+                write("\"", escape_xml(v), "\"")
         else
-                httpd.write(escape_xml(tostring(v)))
+                write(escape_xml(tostring(v)))
         end
 end
 

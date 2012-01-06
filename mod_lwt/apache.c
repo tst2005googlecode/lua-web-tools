@@ -329,13 +329,11 @@ static int apr_table_newindex (lua_State *L) {
 	t = *((apr_table_t **) luaL_checkudata(L, 1,
 			LWT_APACHE_APR_TABLE_METATABLE));
 	key = luaL_checkstring(L, 2);
-	if (lua_isstring(L, 3)) {
-		value = lua_tostring(L, 3);
+	value = luaL_optstring(L, 3, NULL);
+	if (value) {
 		apr_table_set(t, key, value);
-	} else if (lua_isnil(L, 3)) {
-		apr_table_unset(t, key);
 	} else {
-		luaL_typerror(L, 3, "string");
+		apr_table_unset(t, key);
 	}
 
 	return 0;
@@ -357,7 +355,7 @@ static int apr_table_tostring (lua_State *L) {
 /*
  * Provides the iterator for APR tables.
  */
-static int next (lua_State *L) {
+static int apr_table_next (lua_State *L) {
 	apr_table_t *t;
 	lua_Integer index;
 	const apr_array_header_t *a;
@@ -384,10 +382,10 @@ static int next (lua_State *L) {
 /*
  * Provides the iterator for APR tables.
  */
-static int pairs (lua_State *L) {
+static int apr_table_pairs (lua_State *L) {
 	luaL_checkudata(L, 1, LWT_APACHE_APR_TABLE_METATABLE);
 	lua_pushinteger(L, 0);
-	lua_pushcclosure(L, next, 1);	
+	lua_pushcclosure(L, apr_table_next, 1);	
 	lua_pushvalue(L, 1);
 	return 2;
 }
@@ -546,7 +544,7 @@ static int escape_js (lua_State *L) {
  * LWT functions
  */
 static const luaL_Reg functions[] = {
-	{ "pairs", pairs },
+	{ "pairs", apr_table_pairs },
 	{ "set_status", set_status },
 	{ "set_content_type", set_content_type },
 	{ "add_header", add_header },
@@ -662,6 +660,44 @@ static cookie_io_functions_t out_io_functions = {
 	NULL
 };
 
+#if LUA_VERSION_NUM >= 502
+/**
+ * Closes the Lua filehandle of a cookie file.
+ */
+static int filehandle_close (lua_State *L) {
+	luaL_Stream *p;
+	int res;
+
+	p = (luaL_Stream *) luaL_checkudata(L, 1, LUA_FILEHANDLE);
+	res = fclose(p->f);
+	return luaL_fileresult(L, res == 0, NULL);
+}
+
+/*
+ * Registers the request and response file handles in the Lua state.
+ */
+static void register_filehandles (lua_State *L) {
+	luaL_Stream *p;
+
+	/* register request file */
+	p = (luaL_Stream *) lua_newuserdata(L, sizeof(luaL_Stream));
+	memset(p, 0, sizeof(luaL_Stream));
+	luaL_setmetatable(L, LUA_FILEHANDLE);
+	p->closef = filehandle_close;
+	p->f = fopencookie(L, "r", in_io_functions);
+	lua_setfield(L, -2, "input");
+
+	/* register response file */
+	p  = (luaL_Stream *) lua_newuserdata(L, sizeof(luaL_Stream));
+	memset(p, 0, sizeof(luaL_Stream));
+	p->closef = NULL;
+	luaL_setmetatable(L, LUA_FILEHANDLE);
+	p->closef = filehandle_close;
+	p->f = fopencookie(L, "w", out_io_functions);
+	setvbuf(p->f, NULL, _IONBF, 0);
+	lua_setfield(L, -2, "output");
+}
+#else
 /*
  * Closes the Lua filehandle of a cookie file.
  */
@@ -717,6 +753,7 @@ static void register_filehandles (lua_State *L) {
 	/* pop file environment */
 	lua_pop(L, 1);
 }
+#endif
 
 /*
  * Reads the request body.
@@ -1417,7 +1454,11 @@ void lwt_apache_push_env (lua_State *L, request_rec *r) {
 
 int luaopen_apache (lua_State *L) {
 	/* register module, functions and file handles */
-	luaL_register(L, LWT_APACHE_MODULE, functions);
+	#if LUA_VERSION_NUM >= 502
+	luaL_newlib(L, functions);
+	#else
+	luaL_register(L, luaL_checkstring(L, 1), functions);
+	#endif
 	register_filehandles(L);
 	register_log(L);
 
@@ -1429,6 +1470,8 @@ int luaopen_apache (lua_State *L) {
 	lua_setfield(L, -2, "__newindex");
 	lua_pushcfunction(L, apr_table_tostring);
 	lua_setfield(L, -2, "__tostring");
+	lua_pushcfunction(L, apr_table_pairs);
+	lua_setfield(L, -2, "__pairs");
 	lua_pop(L, 1);
 
 	/* create metatables for request rec */
