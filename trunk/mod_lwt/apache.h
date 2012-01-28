@@ -14,9 +14,6 @@
 #define LWT_APACHE_REQUEST_REC_METATABLE "lwt_request_rec_metatable"
 #define LWT_APACHE_APR_TABLE_METATABLE "lwt_apr_table_metatable"
 
-#define LWT_APACHE_ARGLIMIT (1024 * 1024)
-#define LWT_APACHE_FILELIMIT (50 * 1024 * 1024)
-
 /**
  * Initializes the Lua support.
  */
@@ -49,9 +46,13 @@ apr_status_t lwt_apache_push_request_rec (lua_State *L, request_rec *r);
  *
  * @param L the Lua state
  * @param r the request record
+ * @param maxargs the maximum number of arguments
+ * @param argslimit the maximum arguments size
+ * @param filelimit the maximum file upload size
  * @return a status code
  */
-apr_status_t lwt_apache_push_args (lua_State *L, request_rec *r);
+apr_status_t lwt_apache_push_args (lua_State *L, request_rec *r, int maxargs,
+		apr_size_t argslimit, apr_size_t filelimit);
 
 /**
  * Pushes the request environment onto the Lua stack.

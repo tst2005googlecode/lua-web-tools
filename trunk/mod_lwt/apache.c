@@ -788,7 +788,7 @@ static apr_status_t read_request_body (char **body, apr_size_t limit,
 				pos += read;
 				if (pos == bufsize) {
 					new_bufsize = bufsize * 2;
-					if (new_bufsize > LWT_APACHE_ARGLIMIT) {
+					if (new_bufsize > limit) {
 						ap_log_rerror(APLOG_MARK,
 								APLOG_ERR, 0, r,
 								"Request body "
@@ -812,13 +812,21 @@ static apr_status_t read_request_body (char **body, apr_size_t limit,
  * Deoodes URL encoded arguments.
  */
 static apr_status_t decode_urlencoded (apr_table_t *args, char *urlencoded_args,
-		request_rec *r) {
+		int maxargs, request_rec *r) {
 	char *tok, *last, *pos;
 	const char *sep = "&";
 
 	/* decode arguments */
 	tok = apr_strtok(urlencoded_args, sep, &last);
 	while (tok != NULL) {
+		/* check argument count */
+		if (apr_table_elts(args)->nelts + 1 > maxargs) {
+			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "Too many "
+					"request arguments (maximum %d)",
+					maxargs);
+			return APR_EGENERAL;
+		}
+		
 		/* convert + to space (historical) */
 		pos = tok;
 		while (*pos) {
@@ -855,17 +863,17 @@ static apr_status_t decode_urlencoded (apr_table_t *args, char *urlencoded_args,
  */
 typedef struct multipart_rec {
 	request_rec *r;
-	apr_file_t *F;
-	size_t fsize;
 	char *buf;
-	size_t bpos, bmark, blimit, bcapacity;
+	apr_size_t bpos, bmark, blimit, bcapacity;
 	char *line;
-	size_t lpos, llimit, lcapacity;
+	apr_size_t lpos, llimit, lcapacity;
 	char *boundary;
-	size_t xpos, xlimit;
+	apr_size_t xpos, xlimit;
+	apr_size_t asize, alimit;
+	apr_file_t *F;
+	apr_size_t fsize, flimit;
 	char *value;
-	size_t vpos, vcapacity;
-	size_t asize;
+	apr_size_t vpos, vcapacity;
 } multipart_rec;
 
 /*
@@ -1090,9 +1098,9 @@ static apr_status_t multipart_process (multipart_rec *m) {
 
 	cnt = m->bpos - m->bmark;
 	if (m->F) {
-		if (m->fsize + cnt > LWT_APACHE_FILELIMIT) {
+		if (m->fsize + cnt > m->flimit) {
 			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, m->r,
-					"POST arguments too large");
+					"POST files too large");
 			return APR_EGENERAL;
 		}
 		if ((status = apr_file_write(m->F, m->buf + m->bmark, &cnt))
@@ -1102,7 +1110,7 @@ static apr_status_t multipart_process (multipart_rec *m) {
 		m->fsize += cnt;
 	} else {
 		if (cnt + 1 > m->vcapacity - m->vpos ||
-				m->asize + cnt > LWT_APACHE_ARGLIMIT) {
+				m->asize + cnt > m->alimit) {
 			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, m->r,
 					"POST arguments too large");
 			return APR_EGENERAL;
@@ -1180,11 +1188,13 @@ static apr_status_t multipart_scan (multipart_rec *m) {
 /*
  * Reads a multipart/form-data post.
  */
-static apr_status_t read_multipart (apr_table_t *args, request_rec *r) {
+static apr_status_t read_multipart (apr_table_t *args, int maxargs,
+		apr_size_t argslimit, apr_size_t filelimit, request_rec *r) {
 	const char *content_type;
 	multipart_rec *m;
 	apr_status_t status;
 	char *headername, *headervalue, *name, *filename;
+	size_t len;
 	const char *tempdir;
 
 	/* anything to process? */
@@ -1205,7 +1215,9 @@ static apr_status_t read_multipart (apr_table_t *args, request_rec *r) {
 	m->buf = apr_palloc(r->pool, m->bcapacity);
 	m->lcapacity = 1024;
 	m->line = apr_palloc(r->pool, m->lcapacity);
-	m->vcapacity = LWT_APACHE_ARGLIMIT;
+	m->alimit = argslimit;
+	m->flimit = filelimit;
+	m->vcapacity = argslimit;
 	m->value = apr_palloc(r->pool, m->vcapacity);
 	
 	/* get boundary */
@@ -1229,6 +1241,14 @@ static apr_status_t read_multipart (apr_table_t *args, request_rec *r) {
 		/* find final boundary */
 		if (strcmp(&m->line[m->xlimit - 2], "--") == 0) {
 			break;
+		}
+
+		/* check argument count */
+		if (apr_table_elts(args)->nelts + 1 > maxargs) {
+			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "Too many "
+					"request arguments (maximum %d)",
+					maxargs);
+			return APR_EGENERAL;
 		}
 
 		/* process headers */
@@ -1261,15 +1281,13 @@ static apr_status_t read_multipart (apr_table_t *args, request_rec *r) {
 			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "No name");
 			return APR_EGENERAL;
 		}
-
-		/* increase argument size by one line capacity to prevent */
-		/* a denial of service attack with many small arguments */
-		if (m->asize + m->lcapacity > LWT_APACHE_ARGLIMIT) {
+		len = strlen(name);
+		if (m->asize + len > m->alimit) {
 			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
 					"POST arguments too large");
 			return APR_EGENERAL;
 		}
-		m->asize += m->lcapacity;
+		m->asize += len;
 
 		/* setup */
 		if (filename) {
@@ -1388,8 +1406,10 @@ apr_status_t lwt_apache_push_request_rec (lua_State *L,
 	return APR_SUCCESS;
 }
 
-apr_status_t lwt_apache_push_args (lua_State *L, request_rec *r) {
+apr_status_t lwt_apache_push_args (lua_State *L, request_rec *r, int maxargs,
+		apr_size_t argslimit, apr_size_t filelimit) {
 	apr_table_t *args;
+	size_t len;
 	char *urlencoded_args;
 	apr_status_t status;
 	const char *content_type, *content_type_noparam;
@@ -1397,16 +1417,18 @@ apr_status_t lwt_apache_push_args (lua_State *L, request_rec *r) {
 	/* extract args */
 	args = apr_table_make(r->pool, 4);
 	if (r->args != NULL) {
-		if (strlen(r->args) > LWT_APACHE_ARGLIMIT) {
+		len = strlen(r->args);
+		if (len > argslimit) {
 			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
 					"GET arguments too large");
 			return APR_EGENERAL;
 		}
 		urlencoded_args = apr_pstrdup(r->pool, r->args);
-		if ((status = decode_urlencoded(args, urlencoded_args, r))
-				!= APR_SUCCESS) {
+		if ((status = decode_urlencoded(args, urlencoded_args, maxargs,
+				r)) != APR_SUCCESS) {
 			return status;
 		}
+		argslimit -= len;
 	}
 	content_type = apr_table_get(r->headers_in, "Content-type");
 	if (content_type) {
@@ -1414,18 +1436,18 @@ apr_status_t lwt_apache_push_args (lua_State *L, request_rec *r) {
 		if (strcasecmp("application/x-www-form-urlencoded",
 				content_type_noparam) == 0) {
 			if ((status = read_request_body(&urlencoded_args,
-					LWT_APACHE_ARGLIMIT, r))
-					!= APR_SUCCESS) {
+					argslimit, r)) != APR_SUCCESS) {
 				return status;
 			}
 			get_lwt_request_rec(L)->in_ready = 1;
 			if ((status = decode_urlencoded(args, urlencoded_args,
-					r)) != APR_SUCCESS) {
+					maxargs, r)) != APR_SUCCESS) {
 				return status;
 			}
 		} else if (strcasecmp("multipart/form-data",
 				content_type_noparam) == 0) {
-			if ((status = read_multipart(args, r)) != APR_SUCCESS) {
+			if ((status = read_multipart(args, maxargs, argslimit,
+					filelimit, r)) != APR_SUCCESS) {
 				return status;
 			}
 			get_lwt_request_rec(L)->in_ready = 1;
