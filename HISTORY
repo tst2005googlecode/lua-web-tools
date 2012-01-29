@@ -12,7 +12,11 @@ configuration directives when these are used in a directory configuration.
 of arguments, the arguments size, the file upload size and the memory
 allocated by Lua.
 
-- Corrected an issue where incorrectly using multiple else elements in a
+- Added the allocated Lua memory to the request statistics.
+
+- Improved diagnostic messages in case of Lua errors.
+
+- Corrected an issue where incorrectly using else and elseif elements in a
 template would not be detected by the compiler.
 
 - Improved Lua 5.2 support.
