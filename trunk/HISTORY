@@ -4,7 +4,7 @@ LWT Release Notes
 * Release 0.9.2
 
 - Added support for relative paths in the LuaPath and LuaCPath
-configuration directives when these are used in a direcory configuration.
+configuration directives when these are used in a directory configuration.
 
 - Added configuration directives for pre-request and post-request hooks.
 
