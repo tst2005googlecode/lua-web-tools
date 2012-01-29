@@ -3,36 +3,41 @@ LWT Release Notes
 
 * Release 0.9.2
 
-FEATURE: Added support for relative paths in the LuaPath and LuaCPath
-configuration directives when they are used in a direcory configuration.
+- Added support for relative paths in the LuaPath and LuaCPath
+configuration directives when these are used in a direcory configuration.
 
-FEATURE: Added configuration directives for limitting the maximum number
+- Added configuration directives for pre-request and post-request hooks.
+
+- Added configuration directives for limitting the maximum number
 of arguments, the arguments size, the file upload size and the memory
 allocated by Lua.
 
-FEATURE: Added pre-request and post-request hooks.
+- Corrected an issue where incorrectly using multiple else elements in a
+template would not be detected by the compiler.
 
-FIX: Adjusted IS and cache Lua modules to Lua 5.2.
+- Improved Lua 5.2 support.
 
 
 * Release 0.9.1 (2012-01-06)
 
-FEATURE: Lua 5.2 compatibility. The regular Lua pairs function can now be used
+- Added Lua 5.2 compatibility. The regular Lua pairs function can now be used
 to iterate APR tables.
 
-CHANGE: Data read from and written to memcached is now passed directly in the
+- Data read from and written to memcached is now passed directly in the
 cache buffer to and from the decoding and encoding functions, eliminating the
 Lua string copy (and Lua buffer) overhead. Custom decoders unable to consume
 the cache buffer directly must invoke tostring() as a result of this change.
 
-FIX: httpd.add_cookie() would not treat a negative expires argument as
-documented.
+- Corrected an issue where the httpd.add_cookie() function would not treat a
+negative expires argument as documented.
 
-FIX: Send quit command to memecached before closing a connection.
+- The cache module did not send a quit command to memecached before closing a
+connection. This has been corrected.
 
-FIX: Adjusted mod_lwt makefile to explicitly link with librt.
+- The mod_lwt Makefile did not explicitly link with librt. This has been
+corrected.
 
 
 * Release 0.9.0 (2011-08-19)
 
-Initial public release.
+- Initial public release.

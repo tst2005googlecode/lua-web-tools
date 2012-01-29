@@ -277,9 +277,7 @@ static apr_status_t compile_exp (parser_rec *p, const char *exp,
 	const char *chunk;
 
 	chunk = apr_pstrcat(p->pool, "return ", exp, NULL);
-	switch (luaL_loadbuffer(p->L, chunk, strlen(chunk), exp)) {
-	case LUA_ERRSYNTAX:
-	case LUA_ERRMEM:
+	if (luaL_loadbuffer(p->L, chunk, strlen(chunk), exp) != 0) {
 		return parse_error(p, lua_tostring(p->L, -1));
 	}
 	*index = luaL_ref(p->L, LUA_REGISTRYINDEX);
@@ -292,10 +290,7 @@ static apr_status_t compile_exp (parser_rec *p, const char *exp,
  */
 static apr_status_t evaluate_exp (render_rec *d, int index, int nret) {
 	lua_rawgeti(d->L, LUA_REGISTRYINDEX, index);
-	switch (lua_pcall(d->L, 0, nret, d->errfunc)) {
-	case LUA_ERRRUN:
-	case LUA_ERRMEM:
-	case LUA_ERRERR:
+	if (lua_pcall(d->L, 0, nret, d->errfunc) != 0) {
 		return runtime_error(d);
 	}
 
@@ -432,7 +427,7 @@ static apr_status_t process_else (parser_rec *p, const char *element,
 			return parse_error(p, "no 'if' to continue");
 		}
 		block = ((block_t *) p->b->elts) + p->b->nelts - 1;
-		if (block->type != TEMPLATE_TIF) {
+		if (block->type != TEMPLATE_TIF || block->if_last == -1) {
 			return parse_error(p, "no 'if' to continue");
 		}
 
@@ -981,10 +976,7 @@ static apr_status_t render_template (render_rec *d) {
 			lua_pushvalue(d->L, -3);
 			lua_pushvalue(d->L, -3);
 			cnt = n->for_next_names->nelts;
-			switch (lua_pcall(d->L, 2, cnt, d->errfunc)) {
-			case LUA_ERRRUN:
-			case LUA_ERRMEM:
-			case LUA_ERRERR:
+			if (lua_pcall(d->L, 2, cnt, d->errfunc) != 0) {
 				return runtime_error(d);
 			}
 			if (lua_isnil(d->L, -cnt)) {
@@ -1047,19 +1039,7 @@ static apr_status_t render_template (render_rec *d) {
 		case TEMPLATE_TSUB:
 			lua_rawgeti(d->L, LUA_REGISTRYINDEX, n->sub_index);
 			switch (lua_pcall(d->L, 0, 1, d->errfunc)) {
-			case LUA_ERRRUN:
-				if (n->sub_flags & TEMPLATE_FSUPERR) {
-					str = "";
-				} else {
-					return runtime_error(d);
-				}
-				break;
-
-			case LUA_ERRMEM:
-			case LUA_ERRERR:
-				return runtime_error(d);
-
-			default:
+			case 0:
 				if (lua_isstring(d->L, -1)) {
 					str = lua_tostring(d->L, -1);
 				} else if (lua_isnil(d->L, -1) && (n->sub_flags
@@ -1070,6 +1050,18 @@ static apr_status_t render_template (render_rec *d) {
 							luaL_typename(d->L,
 							-1));
 				}
+				break;
+
+			case LUA_ERRRUN:
+				if (n->sub_flags & TEMPLATE_FSUPERR) {
+					str = "";
+				} else {
+					return runtime_error(d);
+				}
+				break;
+
+			default:
+				return runtime_error(d);
 			}
 			lua_pop(d->L, 1);
 			if (n->sub_flags & TEMPLATE_FESCURL) {
