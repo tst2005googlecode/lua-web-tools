@@ -385,7 +385,7 @@ static apr_status_t process_elseif (parser_rec *p, const char *element,
 			return parse_error(p, "no 'if' to continue");
 		}
 		block = ((block_t *) p->b->elts) + p->b->nelts - 1;
-		if (block->type != TEMPLATE_TIF) {
+		if (block->type != TEMPLATE_TIF || block->if_last == -1) {
 			return parse_error(p, "no 'if' to continue");
 		}
 

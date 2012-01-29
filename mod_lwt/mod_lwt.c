@@ -2,6 +2,7 @@
  * Provides the mod_lwt Apache module. See LICENSE for license terms.
  */
 
+#include <setjmp.h>
 #include <apr_strings.h>
 #include <httpd.h>
 #include <http_protocol.h>
@@ -153,7 +154,7 @@ static apr_status_t filepath_root (lwt_conf_t *conf, const char **rootpath,
 	return status;
 }
 
-/**
+/*
  * Roots a Lua path.
  */
 static apr_status_t luapath_root (lwt_conf_t *conf, char **rootpath,
@@ -180,6 +181,38 @@ static apr_status_t luapath_root (lwt_conf_t *conf, char **rootpath,
 		*((const char **) apr_array_push(toks)) = roottok;
 	}
 	*rootpath = apr_array_pstrcat(conf->p, toks, 0);
+	return APR_SUCCESS;
+}
+
+/*
+ * Parses a limit value.
+ */
+static apr_status_t limit (const char *arg, apr_off_t *value) {
+	apr_status_t status;
+	char *end;
+	if ((status = apr_strtoff(value, arg, &end, 10)) != APR_SUCCESS) {
+		return status;
+	}
+	if (*value < 0) {
+		return APR_EGENERAL;
+	}
+	switch (*end) {
+	case 'K':
+		*value *= 1024;
+		end++;
+		break;
+	case 'M':
+		*value *= 1024 * 1024;
+		end++;
+		break;
+	case 'G':
+		*value *= 1024 * 1024 * 1024;
+		end++;
+		break;
+	}
+	if (*end) {
+		return APR_EGENERAL;
+	}
 	return APR_SUCCESS;
 }
 
@@ -264,9 +297,7 @@ static const char *set_luamaxargs (cmd_parms *cmd, void *conf,
 static const char *set_luaargslimit (cmd_parms *cmd, void *conf,
 		const char *arg) {
 	apr_off_t value;
-	char *end;
-	if (apr_strtoff(&value, arg, &end, 10) != APR_SUCCESS
-			|| *end || value < 0) {
+	if (limit(arg, &value) != APR_SUCCESS) {
 		return "LuaArgsLimit requires a non-negative integer";
 	}
 	((lwt_conf_t *) conf)->argslimit = value;
@@ -279,9 +310,7 @@ static const char *set_luaargslimit (cmd_parms *cmd, void *conf,
 static const char *set_luafilelimit (cmd_parms *cmd, void *conf,
 		const char *arg) {
 	apr_off_t value;
-	char *end;
-	if (apr_strtoff(&value, arg, &end, 10) != APR_SUCCESS
-			|| *end || value < 0) {
+	if (limit(arg, &value) != APR_SUCCESS) {
 		return "LuaFileLimit requires a non-negative integer";
 	}
 	((lwt_conf_t *) conf)->filelimit = value;
@@ -294,9 +323,7 @@ static const char *set_luafilelimit (cmd_parms *cmd, void *conf,
 static const char *set_luamemorylimit (cmd_parms *cmd, void *conf,
 		const char *arg) {
 	apr_off_t value;
-	char *end;
-	if (apr_strtoff(&value, arg, &end, 10) != APR_SUCCESS
-			|| *end || value < 0) {
+	if (limit(arg, &value) != APR_SUCCESS) {
 		return "LuaMemoryLimit requires a non-negative integer";
 	}
 	((lwt_conf_t *) conf)->memorylimit = value;
@@ -357,7 +384,7 @@ static void log_request (lwt_stat_t *mark, lwt_mem_t *mem, request_rec *r) {
 }
 
 /*
- * Provides the LUA allocator function implemented in terms of APR pools.
+ * Provides the Lua allocator function implemented in terms of APR pools.
  */
 static void *lua_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
 	lwt_mem_t *mem = ud;
@@ -395,9 +422,33 @@ static void *lua_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
  * Performs cleanup processing on a Lua state.
  */
 static apr_status_t lua_cleanup (void *ud) {
-        lua_State *L = ud;
-        lua_close(L);
-        return APR_SUCCESS;
+	lua_State *L = ud;
+	lua_atpanic(L, NULL);
+	lua_close(L);
+	return APR_SUCCESS;
+}
+
+/*
+ * Provides the Lua panic function.
+ */
+static __thread jmp_buf lua_panicbuf;
+static int lua_panic (lua_State *L) {
+	longjmp(lua_panicbuf, -1);
+}
+
+/*
+ * Returns the Lua error message.
+ */
+static const char *lua_errormsg (lua_State *L) {
+	if (lua_gettop(L) > 0) {
+		if (lua_isstring(L, -1)) {
+			return lua_tostring(L, -1);
+		} else {
+			return "(error object is not a string)";
+		}
+	} else {
+		return "(no error object)";
+	}
 }
 
 /*
@@ -414,7 +465,7 @@ static int dofile (request_rec *r, lwt_conf_t *conf, lua_State *L,
 		break;
 
 	case LUA_ERRSYNTAX:
-		errormsg = lua_tostring(L, -1);
+		errormsg = lua_errormsg(L);
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
 				"Lua syntax error loading '%s': %s",
 				filename, errormsg);
@@ -439,26 +490,28 @@ static int dofile (request_rec *r, lwt_conf_t *conf, lua_State *L,
 
 	case LUA_ERRMEM:
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-				"Lua memory allocation error loading '%s'",
-				filename);
+				"Lua memory allocation error loading '%s': %s",
+				filename, lua_errormsg(L));
 		return HTTP_INTERNAL_SERVER_ERROR;
 
 	#if LUA_VERSION_NUM >= 502
 	case LUA_ERRGCMM:
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-				"Lua gc metamethod error loading '%s'",
-				filename);
+				"Lua gc metamethod error loading '%s': %s",
+				filename, lua_errormsg(L));
 		return HTTP_INTERNAL_SERVER_ERROR;
 	#endif
 
 	case LUA_ERRFILE:
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-				"Lua file read error loading '%s'", filename);
+				"Lua file read error loading '%s': %s",
+				filename, lua_errormsg(L));
 		return HTTP_INTERNAL_SERVER_ERROR;
 
 	default:
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-				"Unknown Lua error loading '%s'", filename);
+				"Unknown Lua error loading '%s': %s",
+				filename, lua_errormsg(L));
 		return HTTP_INTERNAL_SERVER_ERROR;
 	}
 
@@ -492,10 +545,7 @@ static int dofile (request_rec *r, lwt_conf_t *conf, lua_State *L,
 		}
 			
 	case LUA_ERRRUN:
-		errormsg = lua_tostring(L, -1);
-		if (errormsg == NULL) {
-			errormsg = "(error object is not a string)";
-		}
+		errormsg = lua_errormsg(L);
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
 				"Lua runtime error running '%s': %s",
 				filename, errormsg);
@@ -520,27 +570,28 @@ static int dofile (request_rec *r, lwt_conf_t *conf, lua_State *L,
 		
 	case LUA_ERRMEM:
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-				"Lua memory allocation error running '%s'",
-				filename);
+				"Lua memory allocation error running '%s': %s",
+				filename, lua_errormsg(L));
 		return HTTP_INTERNAL_SERVER_ERROR;
 
 	case LUA_ERRERR:
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-				"Lua error handler error running '%s'",
-				filename);
+				"Lua error handler error running '%s': %s",
+				filename, lua_errormsg(L));
 		return HTTP_INTERNAL_SERVER_ERROR;
 
 	#if LUA_VERSION_NUM >= 502
 	case LUA_ERRGCMM:
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-				"Lua gc metamethod error running '%s'",
-				filename);
+				"Lua gc metamethod error running '%s': %s",
+				filename, lua_errormsg(L));
 		return HTTP_INTERNAL_SERVER_ERROR;
 	#endif
 
 	default:
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-				"Unknown Lua error running '%s'", filename);
+				"Unknown Lua error running '%s': %s",
+				filename, lua_errormsg(L));
 		return HTTP_INTERNAL_SERVER_ERROR;
 	}
 }
@@ -550,7 +601,6 @@ static int dofile (request_rec *r, lwt_conf_t *conf, lua_State *L,
  */
 static int dowsapi (request_rec *r, lua_State *L, const char *filename) {
 	apr_status_t status;
-	const char *errormsg;
 
 	/* load the WSAPI module */
 	lua_getglobal(L, "require");
@@ -584,39 +634,35 @@ static int dowsapi (request_rec *r, lua_State *L, const char *filename) {
 		return OK;
 
 	case LUA_ERRRUN:
-		errormsg = lua_tostring(L, -1);
-		if (errormsg == NULL) {
-			errormsg = "(error object is not a string)";
-		}
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, 
 				"Lua runtime error running '%s': %s",
-				filename, errormsg);
+				filename, lua_errormsg(L));
 		return HTTP_INTERNAL_SERVER_ERROR;
 
 	case LUA_ERRMEM:
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-				"Lua memory allocation error running '%s'",
-				filename);
+				"Lua memory allocation error running '%s': %s",
+				filename, lua_errormsg(L));
 		return HTTP_INTERNAL_SERVER_ERROR;
 
 	case LUA_ERRERR:
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, 
-				"Lua error handler error running '%s'",
-				filename);
+				"Lua error handler error running '%s': %s",
+				filename, lua_errormsg(L));
 		return HTTP_INTERNAL_SERVER_ERROR;
 
 	#if LUA_VERSION_NUM >= 502
 	case LUA_ERRGCMM:
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, 
-				"Lua gc metamethod error running '%s'",
-				filename);
+				"Lua gc metamethod error running '%s': %s",
+				filename, lua_errormsg(L));
 		return HTTP_INTERNAL_SERVER_ERROR;
 	#endif
 
 	default:
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-				"Unknown Lua error running '%s'",
-				filename);
+				"Unknown Lua error running '%s': %s",
+				filename, lua_errormsg(L));
 		return HTTP_INTERNAL_SERVER_ERROR;
 	}
 }
@@ -686,6 +732,12 @@ static int handler (request_rec *r) {
 	}
 	apr_pool_cleanup_register(r->pool, (void *) L, lua_cleanup,
 			apr_pool_cleanup_null);
+	if (setjmp(lua_panicbuf)) {
+		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "Lua panic: %s",
+				lua_errormsg(L));
+		return HTTP_INTERNAL_SERVER_ERROR;
+	}
+	lua_atpanic(L, lua_panic);
 
 	/* register modules */
 	luaL_openlibs(L);
