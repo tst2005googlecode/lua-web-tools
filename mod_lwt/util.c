@@ -137,6 +137,12 @@ const char *lwt_util_escape_js (apr_pool_t *pool, const char *s) {
 }
 
 int lwt_util_traceback (lua_State *L) {
+	#if LUA_VERSION_NUM >= 502
+	const char *msg = lua_tostring(L, 1);
+	if (msg != NULL || lua_isnoneornil(L, 1)) {
+		luaL_traceback(L, L, msg, 1);
+	}
+	#else 
 	/* get the traceback function from the debug module */
 	lua_getglobal(L, LUA_DBLIBNAME);
 	if (!lua_istable(L, -1)) {
@@ -153,6 +159,7 @@ int lwt_util_traceback (lua_State *L) {
 	lua_pushvalue(L, 1);
 	lua_pushinteger(L, 2);
 	lua_call(L, 2, 1);
+	#endif
 
 	return 1;
 }
