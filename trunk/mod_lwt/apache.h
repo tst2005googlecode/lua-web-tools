@@ -55,14 +55,6 @@ apr_status_t lwt_apache_push_args (lua_State *L, request_rec *r, int maxargs,
 		apr_size_t argslimit, apr_size_t filelimit);
 
 /**
- * Pushes the request environment onto the Lua stack.
- *
- * @param L the Lua state
- * @param r the request record
- */
-void lwt_apache_push_env (lua_State *L, request_rec *r);
-
-/**
  * Opens the Apache library in a Lua state.
  *
  * @param L the Lua state

@@ -25,12 +25,13 @@
 typedef struct lwt_request_rec {
 	request_rec *r;
 	int in_ready;
+	int env_set;
 } lwt_request_rec;
 
 /*
  * A field handler pushes a field from the request record.
  */
-typedef int (*request_rec_fh) (lua_State *L, request_rec *r);
+typedef int (*request_rec_fh) (lua_State *L, lwt_request_rec *lr);
 
 /*
  * A hash of field handlers.
@@ -54,7 +55,7 @@ static int request_rec_index (lua_State *L) {
 		lua_pushnil(L);
 		return 1;
 	}
-	return fh(L, lr->r);
+	return fh(L, lr);
 }
 
 /*
@@ -70,17 +71,17 @@ static int request_rec_tostring (lua_State *L) {
 	return 1;
 }
 
-static int uri_fh (lua_State *L, request_rec *r) {
+static int uri_fh (lua_State *L, lwt_request_rec *lr) {
 	const char *begin, *end;
 
 	/* NULL request line */
-	if (r->the_request == NULL) {
+	if (lr->r->the_request == NULL) {
 		lua_pushnil(L);
 		return 1;
 	}
 	
 	/* find URI */
-	begin = r->the_request; 
+	begin = lr->r->the_request; 
 	while (*begin && !apr_isspace(*begin)) {
 		begin++;
 	}
@@ -97,140 +98,155 @@ static int uri_fh (lua_State *L, request_rec *r) {
 	return 1;
 }
 
-static int protocol_fh (lua_State *L, request_rec *r) {
-	if (r->protocol != NULL) {
-		lua_pushstring(L, r->protocol);
+static int protocol_fh (lua_State *L, lwt_request_rec *lr) {
+	if (lr->r->protocol != NULL) {
+		lua_pushstring(L, lr->r->protocol);
 	} else {
 		lua_pushnil(L);
 	}
 	return 1;
 }
 
-static int hostname_fh (lua_State *L, request_rec *r) {
-	if (r->hostname != NULL) {
-		lua_pushstring(L, r->hostname);
+static int hostname_fh (lua_State *L, lwt_request_rec *lr) {
+	if (lr->r->hostname != NULL) {
+		lua_pushstring(L, lr->r->hostname);
 	} else {
 		lua_pushnil(L);
 	}
 	return 1;
 }
 
-static int path_fh (lua_State *L, request_rec *r) {
-	if (r->uri != NULL) {
-		lua_pushstring(L, r->uri);
+static int path_fh (lua_State *L, lwt_request_rec *lr) {
+	if (lr->r->uri != NULL) {
+		lua_pushstring(L, lr->r->uri);
 	} else {
 		lua_pushnil(L);
 	}
 	return 1;
 }
 
-static int path_info_fh (lua_State *L, request_rec *r) {
-	if (r->path_info != NULL) {
-		lua_pushstring(L, r->path_info);
+static int path_info_fh (lua_State *L, lwt_request_rec *lr) {
+	if (lr->r->path_info != NULL) {
+		lua_pushstring(L, lr->r->path_info);
 	} else {
 		lua_pushnil(L);
 	}
 	return 1;
 }
 
-static int args_fh (lua_State *L, request_rec *r) {
-	if (r->args != NULL) {
-		lua_pushstring(L, r->args);
+static int args_fh (lua_State *L, lwt_request_rec *lr) {
+	if (lr->r->args != NULL) {
+		lua_pushstring(L, lr->r->args);
 	} else {
 		lua_pushnil(L);
 	}
 	return 1;
 }	
 
-static int method_fh (lua_State *L, request_rec *r) {
-	if (r->method != NULL) {
-		lua_pushstring(L, r->method);
+static int method_fh (lua_State *L, lwt_request_rec *lr) {
+	if (lr->r->method != NULL) {
+		lua_pushstring(L, lr->r->method);
 	} else {
 		lua_pushnil(L);
 	}
 	return 1;
 }
 
-static int headers_in_fh (lua_State *L, request_rec *r) {
+static int env_fh (lua_State *L, lwt_request_rec *lr) {
 	void *userdata;
-	
+
+	if (!lr->env_set) {
+		ap_add_common_vars(lr->r);
+		ap_add_cgi_vars(lr->r);
+		lr->env_set = 1;
+	}
 	userdata = lua_newuserdata(L, sizeof(apr_table_t *));
-	*((apr_table_t **) userdata) = r->headers_in;
+	*((apr_table_t **) userdata) = lr->r->subprocess_env;
 	luaL_getmetatable(L, LWT_APACHE_APR_TABLE_METATABLE);
         lua_setmetatable(L, -2);
 	return 1;
 }
 
-static int headers_out_fh (lua_State *L, request_rec *r) {
+static int headers_in_fh (lua_State *L, lwt_request_rec *lr) {
 	void *userdata;
 	
 	userdata = lua_newuserdata(L, sizeof(apr_table_t *));
-	*((apr_table_t **) userdata) = r->headers_out;
+	*((apr_table_t **) userdata) = lr->r->headers_in;
 	luaL_getmetatable(L, LWT_APACHE_APR_TABLE_METATABLE);
         lua_setmetatable(L, -2);
 	return 1;
 }
 
-static int err_headers_out_fh (lua_State *L, request_rec *r) {
+static int headers_out_fh (lua_State *L, lwt_request_rec *lr) {
 	void *userdata;
 	
 	userdata = lua_newuserdata(L, sizeof(apr_table_t *));
-	*((apr_table_t **) userdata) = r->err_headers_out;
+	*((apr_table_t **) userdata) = lr->r->headers_out;
 	luaL_getmetatable(L, LWT_APACHE_APR_TABLE_METATABLE);
         lua_setmetatable(L, -2);
 	return 1;
 }
 
-static int filename_fh (lua_State *L, request_rec *r) {
-	if (r->filename != NULL) {
-		lua_pushstring(L, r->filename);
+static int err_headers_out_fh (lua_State *L, lwt_request_rec *lr) {
+	void *userdata;
+	
+	userdata = lua_newuserdata(L, sizeof(apr_table_t *));
+	*((apr_table_t **) userdata) = lr->r->err_headers_out;
+	luaL_getmetatable(L, LWT_APACHE_APR_TABLE_METATABLE);
+        lua_setmetatable(L, -2);
+	return 1;
+}
+
+static int filename_fh (lua_State *L, lwt_request_rec *lr) {
+	if (lr->r->filename != NULL) {
+		lua_pushstring(L, lr->r->filename);
 	} else {
 		lua_pushnil(L);
 	}
 	return 1;
 }
 
-static int filedir_fh (lua_State *L, request_rec *r) {
-	if (r->filename != NULL) {
-		lua_pushstring(L, apr_pstrndup(r->pool, r->filename,
-				strlen(r->filename) - strlen(
-				apr_filepath_name_get(r->filename))));
+static int filedir_fh (lua_State *L, lwt_request_rec *lr) {
+	if (lr->r->filename != NULL) {
+		lua_pushstring(L, apr_pstrndup(lr->r->pool, lr->r->filename,
+				strlen(lr->r->filename) - strlen(
+				apr_filepath_name_get(lr->r->filename))));
 	} else {
 		lua_pushnil(L);
 	}
 	return 1;
 }
 
-static int user_fh (lua_State *L, request_rec *r) {
-	if (r->user != NULL) {
-		lua_pushstring(L, r->user);
+static int user_fh (lua_State *L, lwt_request_rec *lr) {
+	if (lr->r->user != NULL) {
+		lua_pushstring(L, lr->r->user);
 	} else {
 		lua_pushnil(L);
 	}
 	return 1;
 }
 
-static int auth_type_fh (lua_State *L, request_rec *r) {
-	if (r->ap_auth_type != NULL) {
-		lua_pushstring(L, r->ap_auth_type);
+static int auth_type_fh (lua_State *L, lwt_request_rec *lr) {
+	if (lr->r->ap_auth_type != NULL) {
+		lua_pushstring(L, lr->r->ap_auth_type);
 	} else {
 		lua_pushnil(L);
 	}
 	return 1;
 }
 
-static int local_ip_fh (lua_State *L, request_rec *r) {
-	if (r->connection->local_ip != NULL) {
-		lua_pushstring(L, r->connection->local_ip);
+static int local_ip_fh (lua_State *L, lwt_request_rec *lr) {
+	if (lr->r->connection->local_ip != NULL) {
+		lua_pushstring(L, lr->r->connection->local_ip);
 	} else {
 		lua_pushnil(L);
 	}
 	return 1;
 }
 
-static int remote_ip_fh (lua_State *L, request_rec *r) {
-	if (r->connection->remote_ip != NULL) {
-		lua_pushstring(L, r->connection->remote_ip);
+static int remote_ip_fh (lua_State *L, lwt_request_rec *lr) {
+	if (lr->r->connection->remote_ip != NULL) {
+		lua_pushstring(L, lr->r->connection->remote_ip);
 	} else {
 		lua_pushnil(L);
 	}
@@ -256,6 +272,7 @@ static void init_request_rec_fh (apr_pool_t *pool) {
 	add_request_rec_fh("path_info", path_info_fh);
 	add_request_rec_fh("args", args_fh);
 	add_request_rec_fh("method", method_fh);
+	add_request_rec_fh("env", env_fh);
 	add_request_rec_fh("headers_in", headers_in_fh);
 	add_request_rec_fh("headers_out", headers_out_fh);
 	add_request_rec_fh("err_headers_out", err_headers_out_fh);
@@ -1460,18 +1477,6 @@ apr_status_t lwt_apache_push_args (lua_State *L, request_rec *r, int maxargs,
 	lua_setmetatable(L, -2);
 
 	return APR_SUCCESS;
-}
-
-void lwt_apache_push_env (lua_State *L, request_rec *r) {
-	/* populate environment */
-	ap_add_common_vars(r);
-	ap_add_cgi_vars(r);
-
-	/* push it */
-	*((apr_table_t **) lua_newuserdata(L, sizeof(apr_table_t *)))
-			= r->subprocess_env;
-	luaL_getmetatable(L, LWT_APACHE_APR_TABLE_METATABLE);
-	lua_setmetatable(L, -2);
 }
 
 int luaopen_apache (lua_State *L) {

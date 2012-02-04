@@ -14,6 +14,8 @@ allocated by Lua.
 
 - Added the allocated Lua memory to the request statistics.
 
+- Added environment table to request value.
+
 - Improved diagnostic messages in case of Lua errors.
 
 - Corrected an issue where incorrectly using else and elseif elements in a

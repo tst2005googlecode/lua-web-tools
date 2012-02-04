@@ -1,4 +1,5 @@
 /*
+
  * Provides the mod_lwt Apache module. See LICENSE for license terms.
  */
 
@@ -622,14 +623,13 @@ static int dowsapi (request_rec *r, lua_State *L, const char *filename) {
 		return HTTP_INTERNAL_SERVER_ERROR;
 	}
 
-	/* set request record and environment in the Lua state */
+	/* set request record (including environment) in the Lua state */
 	if ((status = lwt_apache_push_request_rec(L, r)) != APR_SUCCESS) {
 		return HTTP_INTERNAL_SERVER_ERROR;
 	}
-	lwt_apache_push_env(L, r);
 
 	/* invoke */
-	switch (lua_pcall(L, 2, 0, 1)) {
+	switch (lua_pcall(L, 1, 0, 1)) {
 	case 0:
 		return OK;
 
