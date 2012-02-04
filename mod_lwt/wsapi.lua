@@ -40,7 +40,7 @@ local function add_header (name, value)
 end
 
 -- Run a request via WSAPI
-function run (request, env)
+function run (request)
 	local output, header = { }, true
 	function output:write (...)
 		if header then
@@ -67,7 +67,7 @@ function run (request, env)
 	end
 
 	local function wsapi_env (k)
-		return env[k]
+		return request.env[k]
 	end
 
 	local t = {
