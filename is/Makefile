@@ -16,19 +16,19 @@ mysql.o: core.h mysql.h mysql.c
 	gcc -c -Wall -fPIC -pthread -I${LUA_INCLUDE} -I${MYSQL_INCLUDE} mysql.c
 
 mysql.so: mysql.o
-	gcc -shared -o mysql.so -lmysqlclient_r -lpthread mysql.o
+	gcc -shared -o mysql.so mysql.o -lmysqlclient_r -lpthread
 
 sqlite3.o: core.h sqlite3.h sqlite3.c
 	gcc -c -Wall -fPIC -I${LUA_INCLUDE} -I${SQLITE3_INCLUDE} sqlite3.c
 
 sqlite3.so: sqlite3.o
-	gcc -shared -o sqlite3.so -lsqlite3 sqlite3.o
+	gcc -shared -o sqlite3.so sqlite3.o -lsqlite3
 
 tds.o: core.h tds.h tds.c
 	gcc -c -Wall -fPIC -pthread -I${LUA_INCLUDE} tds.c
 
 tds.so: tds.o
-	gcc -shared -o tds.so -lsybdb -lpthread tds.o
+	gcc -shared -o tds.so tds.o -lsybdb -lpthread
 
 clean:
 	-rm core.o core.so

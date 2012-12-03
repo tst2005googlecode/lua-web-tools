@@ -602,10 +602,9 @@ static int last_insert_rowid (lua_State *L) {
  * Returns a string representation of a connection.
  */
 static int tostring (lua_State *L) {
-        sqlite3_rec *s;
         const char *libversion;
 
-        s = (sqlite3_rec *) luaL_checkudata(L, 1, IS_SQLITE3_METATABLE);
+        luaL_checkudata(L, 1, IS_SQLITE3_METATABLE);
 
 	libversion = sqlite3_libversion();
 	lua_pushfstring(L, "SQLite3 connection [%s]", libversion);
