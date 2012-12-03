@@ -810,6 +810,7 @@ static apr_status_t read_request_body (char **body, apr_size_t limit,
 								APLOG_ERR, 0, r,
 								"Request body "
 								"too large");
+						return APR_EGENERAL;
 					}
 					new_buf = apr_palloc(r->pool,
 							new_bufsize);
@@ -819,6 +820,9 @@ static apr_status_t read_request_body (char **body, apr_size_t limit,
 				}
 			}
 		} while (read != 0);
+	} else {
+		buf = (char *) apr_palloc(r->pool, sizeof(char));
+		*buf = '\0';
 	}
 
 	*body = buf;
