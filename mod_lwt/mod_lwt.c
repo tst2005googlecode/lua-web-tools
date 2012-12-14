@@ -372,7 +372,8 @@ static void log_request (lwt_stat_t *mark, lwt_mem_t *mem, request_rec *r) {
 
 	mark_request(&now, r);
 	ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r, "Request statistics "
-			"[realtime=%.3f s] [cputime=%.3f s] [memory=%.3f M]",
+			"[filename=%s] [realtime=%.3f s] [cputime=%.3f s] "
+			"[memory=%.3f M]", r->filename,
 			(now.realtime.tv_sec +
 			((double) now.realtime.tv_nsec) / 1000000000) -
 			(mark->realtime.tv_sec +
