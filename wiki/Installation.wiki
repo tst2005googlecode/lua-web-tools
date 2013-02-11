@@ -108,7 +108,7 @@ memcached headers:
 To install this dependency:
 
 {{{
-$ sudo apt-get install libmemcached-dev 
+$ sudo apt-get install memcached libmemcached-dev 
 }}}
 
 == Building and Installing ==
