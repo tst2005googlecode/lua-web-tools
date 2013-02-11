@@ -103,9 +103,6 @@ static int supported (lua_State *L, int index) {
 	case LUA_TTABLE:
 		return 1;
 
-	case LUA_FUNCTION:
-		return !lua_iscfunction(L, index);
-
 	default:
 		return 0;
 	}
