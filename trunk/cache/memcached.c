@@ -7,6 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <signal.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/tcp.h>
@@ -199,6 +200,50 @@ static int get_socket (lua_State *L, memcached_rec *m, int index) {
 }
 
 /*
+ * Writes without SIGPIPE.
+ */
+ssize_t write_nosigpipe (int fd, const void *buf, size_t count) {
+	struct sigaction new_action, old_action;
+	ssize_t result;
+
+	/* ignore SIGPIPE */
+	memset(&new_action, 0, sizeof(new_action));
+	new_action.sa_handler = SIG_IGN;
+	sigemptyset(&new_action.sa_mask);
+	sigaction(SIGPIPE, &new_action, &old_action);
+
+	/* write */
+	result = write(fd, buf, count);
+
+	/* restore SIGPIPE */
+	sigaction(SIGPIPE, &old_action, NULL);
+
+	return result;
+}
+
+/*
+ * Writes IO vectors without SIGPIPE.
+ */
+static ssize_t writev_nosigpipe (int fd, const struct iovec *iov, int iovcnt) {
+	struct sigaction new_action, old_action;
+	ssize_t result;
+
+	/* ignore SIGPIPE */
+	memset(&new_action, 0, sizeof(new_action));
+	new_action.sa_handler = SIG_IGN;
+	sigemptyset(&new_action.sa_mask);
+	sigaction(SIGPIPE, &new_action, &old_action);
+
+	/* write */
+	result = writev(fd, iov, iovcnt);
+
+	/* restore SIGPIPE */
+	sigaction(SIGPIPE, &old_action, NULL);
+
+	return result;
+}
+
+/*
  * Reads a response from a memcached server.
  */
 static int read_response (lua_State *L, int fd, uint16_t *status, int parts,
@@ -349,7 +394,7 @@ static int get (lua_State *L) {
 	iov[0].iov_len = sizeof(request.bytes);
 	iov[1].iov_base = (void *) key;
 	iov[1].iov_len = (uint16_t) keylen;
-	if (writev(fd, iov, 2) == -1) {
+	if (writev_nosigpipe(fd, iov, 2) == -1) {
 		luaL_error(L, "error sending request");
 	}
 
@@ -434,7 +479,7 @@ static int set (lua_State *L) {
 		iov[1].iov_len = (uint16_t) keylen;
 		iov[2].iov_base = (void *) value;
 		iov[2].iov_len = valuelen;
-		if (writev(fd, iov, 3) == -1) {
+		if (writev_nosigpipe(fd, iov, 3) == -1) {
 			luaL_error(L, "error sending request");
 		}
 	} else {
@@ -454,7 +499,7 @@ static int set (lua_State *L) {
 		iov[0].iov_len = sizeof(drequest.bytes);
 		iov[1].iov_base = (void *) key;
 		iov[1].iov_len = (uint16_t) keylen;
-		if (writev(fd, iov, 2) == -1) {
+		if (writev_nosigpipe(fd, iov, 2) == -1) {
 			luaL_error(L, "error sending request");
 		}
 	}
@@ -519,7 +564,7 @@ static int increment (lua_State *L) {
 	iov[0].iov_len = sizeof(request.bytes);
 	iov[1].iov_base = (void *) key;
 	iov[1].iov_len = (uint16_t) keylen;
-	if (writev(fd, iov, 2) == -1) {
+	if (writev_nosigpipe(fd, iov, 2) == -1) {
 		luaL_error(L, "error sending request");
 	}
 
@@ -571,7 +616,7 @@ static int flush (lua_State *L) {
 
 	/* send request */
 	fd = get_socket(L, m, 2);
-	if (write(fd, &request, sizeof(request.bytes)) == -1) {
+	if (write_nosigpipe(fd, &request, sizeof(request.bytes)) == -1) {
 		luaL_error(L, "error sending request");
 	}
 
@@ -619,7 +664,7 @@ static int stat (lua_State *L) {
 	iov[0].iov_len = sizeof(request.bytes);
 	iov[1].iov_base = (void *) key;
 	iov[1].iov_len = (uint16_t) keylen;
-	if (writev(fd, iov, 2) == -1) {
+	if (writev_nosigpipe(fd, iov, 2) == -1) {
 		luaL_error(L, "error sending request");
 	}
 
@@ -675,13 +720,9 @@ static int mclose (lua_State *L) {
 		lua_pushnil(L);
 		while (lua_next(L, -2)) {
 			fd = (int) lua_tointeger(L, -1);
-			if (write(fd, &request, sizeof(request)) == -1) {
-				luaL_error(L, "error sending request");
-			}
-			read_response(L, fd, &status, 0, 0);
-			if (status != PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-				luaL_error(L, "memcached error %d",
-						(int) status);
+			if (write_nosigpipe(fd, &request, sizeof(request))
+					!= -1) {
+				read_response(L, fd, &status, 0, 0);
 			}
 
 			/* close */
