@@ -11,6 +11,7 @@
 
 #define LWT_APACHE_MODULE "httpd.core"
 #define LWT_APACHE_REQUEST_REC "lwt_request_rec"
+#define LWT_APACHE_DEFERRED "lwt_deferred"
 #define LWT_APACHE_REQUEST_REC_METATABLE "lwt_request_rec_metatable"
 #define LWT_APACHE_APR_TABLE_METATABLE "lwt_apr_table_metatable"
 
@@ -53,6 +54,23 @@ apr_status_t lwt_apache_push_request_rec (lua_State *L, request_rec *r);
  */
 apr_status_t lwt_apache_push_args (lua_State *L, request_rec *r, int maxargs,
 		apr_size_t argslimit, apr_size_t filelimit);
+
+/**
+ * Clears deferred functions on a Lua state.
+ *
+ * @param L the Lua state
+ * @return a status code
+ */
+apr_status_t lwt_apache_clear_deferred (lua_State *L);
+
+/**
+ * Pushes deferred functions on a Lua state.
+ *
+ * @param L the Lua state
+ * @return a status code
+ */
+apr_status_t lwt_apache_push_deferred (lua_State *L);
+
 
 /**
  * Opens the Apache library in a Lua state.

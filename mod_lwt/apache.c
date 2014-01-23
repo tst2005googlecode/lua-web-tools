@@ -558,6 +558,27 @@ static int escape_js (lua_State *L) {
 }
 
 /*
+ * Defers a function.
+ */
+static int defer (lua_State *L) {
+	luaL_checktype(L, 1, LUA_TFUNCTION);
+	lua_getfield(L, LUA_REGISTRYINDEX, LWT_APACHE_DEFERRED);
+	if (lua_isnil(L, -1)) {
+		lua_pop(L, 1);
+		lua_newtable(L);
+		lua_pushvalue(L, -1);
+		lua_setfield(L, LUA_REGISTRYINDEX, LWT_APACHE_DEFERRED);
+	}
+	lua_pushvalue(L, 1);
+	#if LUA_VERSION_NUM >= 502
+	lua_rawseti(L, -2, (int) lua_rawlen(L, -2) + 1);
+	#else
+	lua_rawseti(L, -2, (int) lua_objlen(L, -2) + 1);
+	#endif
+	return 0;
+}
+
+/*
  * LWT functions
  */
 static const luaL_Reg functions[] = {
@@ -569,6 +590,7 @@ static const luaL_Reg functions[] = {
 	{ "escape_uri", escape_uri },
 	{ "escape_xml", escape_xml },
 	{ "escape_js", escape_js },
+	{ "defer", defer },
 	{ NULL, NULL }
 };
 
@@ -1480,6 +1502,17 @@ apr_status_t lwt_apache_push_args (lua_State *L, request_rec *r, int maxargs,
 	luaL_getmetatable(L, LWT_APACHE_APR_TABLE_METATABLE);
 	lua_setmetatable(L, -2);
 
+	return APR_SUCCESS;
+}
+
+apr_status_t lwt_apache_clear_deferred (lua_State *L) {
+	lua_pushnil(L);
+	lua_setfield(L, LUA_REGISTRYINDEX, LWT_APACHE_DEFERRED);
+	return APR_SUCCESS;
+}
+
+apr_status_t lwt_apache_push_deferred (lua_State *L) {
+	lua_getfield(L, LUA_REGISTRYINDEX, LWT_APACHE_DEFERRED);
 	return APR_SUCCESS;
 }
 
