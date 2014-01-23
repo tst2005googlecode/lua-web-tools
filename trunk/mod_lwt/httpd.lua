@@ -13,6 +13,7 @@ add_header = core.add_header
 escape_uri = core.escape_uri
 escape_xml = core.escape_xml
 escape_js = core.escape_js
+defer = core.defer
 input = core.input
 output = core.output
 debug = core.debug
