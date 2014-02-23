@@ -1,5 +1,4 @@
 /*
-
  * Provides the mod_lwt Apache module. See LICENSE for license terms.
  */
 
@@ -40,6 +39,12 @@
  * Pool keys.
  */
 #define MOD_LWT_POOL_LUASTATE "mod_lwt-luastate"
+
+/*
+ * Error status.
+ */
+#define MOD_LWT_ERROR 0x8000
+#define MOD_LWT_MASK 0x7fff
 
 /**
  * LWT configuration.
@@ -490,7 +495,7 @@ static int dofile (request_rec *r, lwt_conf_t *conf, lua_State *L,
 			ap_rputs("</body>\r\n", r);
 			ap_rputs("</html>\r\n", r);
 			r->status = HTTP_INTERNAL_SERVER_ERROR;
-			return OK;
+			return OK | MOD_LWT_ERROR;
 		} else {
 			return HTTP_INTERNAL_SERVER_ERROR;
 		}
@@ -570,7 +575,7 @@ static int dofile (request_rec *r, lwt_conf_t *conf, lua_State *L,
 			ap_rputs("</body>\r\n", r);
 			ap_rputs("</html>\r\n", r);
 			r->status = HTTP_INTERNAL_SERVER_ERROR;
-			return OK;
+			return OK | MOD_LWT_ERROR;
 		} else {
 			return HTTP_INTERNAL_SERVER_ERROR;
 		}
@@ -777,31 +782,28 @@ static int handler (request_rec *r) {
 
 		/* pre-hook, request, post-hook */
 		if (conf->prehook && ((result = dofile(r, conf, L,
-				conf->prehook)) != OK
-				|| r->status != HTTP_OK)) {
-			lwt_apache_clear_deferred(L);
+				conf->prehook)) != OK)) {
+			lwt_apache_clear_deferred(L, 0);
 			log_request(mark, mem, r);
-			return result;
+			return result & MOD_LWT_MASK;
 		}
-		if ((result = dofile(r, conf, L, r->filename)) != OK
-				|| r->status != HTTP_OK) {
-			lwt_apache_clear_deferred(L);
+		if ((result = dofile(r, conf, L, r->filename)) != OK) {
+			lwt_apache_clear_deferred(L, 0);
 			log_request(mark, mem, r);
-			return result;
+			return result & MOD_LWT_MASK;
 		}
 		if (conf->posthook && ((result = dofile(r, conf, L,
-				conf->posthook)) != OK
-				|| r->status != HTTP_OK)) {
-			lwt_apache_clear_deferred(L);
+				conf->posthook)) != OK)) {
+			lwt_apache_clear_deferred(L, 0);
 			log_request(mark, mem, r);
-			return result;
+			return result & MOD_LWT_MASK;
 		}
 		log_request(mark, mem, r);
 		return result;
 	} else {
 		result = dowsapi(r, L, r->filename);
 		if (result != OK) {
-			lwt_apache_clear_deferred(L);
+			lwt_apache_clear_deferred(L, 0);
 		}
 		log_request(mark, mem, r);
 		return result;
@@ -814,7 +816,7 @@ static int handler (request_rec *r) {
 static int deferred (request_rec *r) {
 	lua_State *L;
 	size_t count;
-	int index;
+	int i, index;
 
 	/* Get Lua state */
 	if (apr_pool_userdata_get((void **) &L, MOD_LWT_POOL_LUASTATE, r->pool)
@@ -828,60 +830,63 @@ static int deferred (request_rec *r) {
 	}
 
 	/* Get deferred functions */
-	if (lwt_apache_push_deferred(L) != APR_SUCCESS) {
-		return OK;
-	}
-	if (lua_isnil(L, -1)) {
-		return OK;
-	}
-	#if LUA_VERSION_NUM >= 502
-	count = lua_rawlen(L, -1);
-	#else
-	count = lua_objlen(L, -1);
-	#endif
-
-	/* Call deferred functions */
-	for (index = 1; index <= count; index++) {
-		lua_rawgeti(L, -1, index);
-		switch (lua_pcall(L, 0, 0, 1)) {
-		case 0:
-			break;
-
-		case LUA_ERRRUN:
-			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-					"Lua runtime error "
-					"in deferred function: %s",
-					lua_errormsg(L));
-			break;
-
-		case LUA_ERRMEM:
-			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-					"Lua memory allocation error "
-					"in deferred function: %s",
-					lua_errormsg(L));
-			break;
-
-		case LUA_ERRERR:
-			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-					"Lua error handler error "
-					"in deferreda function: %s",
-					lua_errormsg(L));
-			break;
-
+	for (i = 0; i < 2; i++) {
+		if (lwt_apache_push_deferred(L, i == 0) != APR_SUCCESS) {
+			continue;
+		}
+		if (lua_isnil(L, -1)) {
+			lua_pop(L, 1);
+			continue;
+		}
 		#if LUA_VERSION_NUM >= 502
-		case LUA_ERRGCMM:
-			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-					"Lua GC metamethod error "
-					"in deferred function: %s",
-					lua_errormsg(L));
-			break;
+		count = lua_rawlen(L, -1);
+		#else
+		count = lua_objlen(L, -1);
 		#endif
 
-		default:
-			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
-					"Unknown Lua error "
-					"in deferred function: %s",
-					lua_errormsg(L));
+		/* Call deferred functions */
+		for (index = 1; index <= count; index++) {
+			lua_rawgeti(L, -1, index);
+			switch (lua_pcall(L, 0, 0, 1)) {
+			case 0:
+				break;
+
+			case LUA_ERRRUN:
+				ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+						"Lua runtime error "
+						"in deferred function: %s",
+						lua_errormsg(L));
+				break;
+
+			case LUA_ERRMEM:
+				ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+						"Lua memory allocation error "
+						"in deferred function: %s",
+						lua_errormsg(L));
+				break;
+
+			case LUA_ERRERR:
+				ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+						"Lua error handler error "
+						"in deferreda function: %s",
+						lua_errormsg(L));
+				break;
+
+			#if LUA_VERSION_NUM >= 502
+			case LUA_ERRGCMM:
+				ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+						"Lua GC metamethod error "
+						"in deferred function: %s",
+						lua_errormsg(L));
+				break;
+			#endif
+
+			default:
+				ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+						"Unknown Lua error "
+						"in deferred function: %s",
+						lua_errormsg(L));
+			}
 		}
 	}
 

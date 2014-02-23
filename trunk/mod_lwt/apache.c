@@ -152,6 +152,11 @@ static int method_fh (lua_State *L, lwt_request_rec *lr) {
 	return 1;
 }
 
+static int status_fh (lua_State *L, lwt_request_rec *lr) {
+	lua_pushinteger(L, (lua_Integer) lr->r->status);
+	return 1;
+}
+
 static int env_fh (lua_State *L, lwt_request_rec *lr) {
 	void *userdata;
 
@@ -272,6 +277,7 @@ static void init_request_rec_fh (apr_pool_t *pool) {
 	add_request_rec_fh("path_info", path_info_fh);
 	add_request_rec_fh("args", args_fh);
 	add_request_rec_fh("method", method_fh);
+	add_request_rec_fh("status", status_fh);
 	add_request_rec_fh("env", env_fh);
 	add_request_rec_fh("headers_in", headers_in_fh);
 	add_request_rec_fh("headers_out", headers_out_fh);
@@ -561,13 +567,17 @@ static int escape_js (lua_State *L) {
  * Defers a function.
  */
 static int defer (lua_State *L) {
+	const char *key;
+
 	luaL_checktype(L, 1, LUA_TFUNCTION);
-	lua_getfield(L, LUA_REGISTRYINDEX, LWT_APACHE_DEFERRED);
+	key = lua_toboolean(L, 2) ? LWT_APACHE_ERR_DEFERRED
+			: LWT_APACHE_DEFERRED;
+	lua_getfield(L, LUA_REGISTRYINDEX, key);
 	if (lua_isnil(L, -1)) {
 		lua_pop(L, 1);
 		lua_newtable(L);
 		lua_pushvalue(L, -1);
-		lua_setfield(L, LUA_REGISTRYINDEX, LWT_APACHE_DEFERRED);
+		lua_setfield(L, LUA_REGISTRYINDEX, key);
 	}
 	lua_pushvalue(L, 1);
 	#if LUA_VERSION_NUM >= 502
@@ -1505,14 +1515,16 @@ apr_status_t lwt_apache_push_args (lua_State *L, request_rec *r, int maxargs,
 	return APR_SUCCESS;
 }
 
-apr_status_t lwt_apache_clear_deferred (lua_State *L) {
+apr_status_t lwt_apache_clear_deferred (lua_State *L, int err) {
 	lua_pushnil(L);
-	lua_setfield(L, LUA_REGISTRYINDEX, LWT_APACHE_DEFERRED);
+	lua_setfield(L, LUA_REGISTRYINDEX, err ? LWT_APACHE_ERR_DEFERRED
+			: LWT_APACHE_DEFERRED);
 	return APR_SUCCESS;
 }
 
-apr_status_t lwt_apache_push_deferred (lua_State *L) {
-	lua_getfield(L, LUA_REGISTRYINDEX, LWT_APACHE_DEFERRED);
+apr_status_t lwt_apache_push_deferred (lua_State *L, int err) {
+	lua_getfield(L, LUA_REGISTRYINDEX, err ? LWT_APACHE_ERR_DEFERRED
+			: LWT_APACHE_DEFERRED);
 	return APR_SUCCESS;
 }
 
