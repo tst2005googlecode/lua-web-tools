@@ -12,6 +12,7 @@
 #define LWT_APACHE_MODULE "httpd.core"
 #define LWT_APACHE_REQUEST_REC "lwt_request_rec"
 #define LWT_APACHE_DEFERRED "lwt_deferred"
+#define LWT_APACHE_ERR_DEFERRED "lwt_err_deferred"
 #define LWT_APACHE_REQUEST_REC_METATABLE "lwt_request_rec_metatable"
 #define LWT_APACHE_APR_TABLE_METATABLE "lwt_apr_table_metatable"
 
@@ -59,17 +60,19 @@ apr_status_t lwt_apache_push_args (lua_State *L, request_rec *r, int maxargs,
  * Clears deferred functions on a Lua state.
  *
  * @param L the Lua state
+ * @param err whether to clear the err deferred functions
  * @return a status code
  */
-apr_status_t lwt_apache_clear_deferred (lua_State *L);
+apr_status_t lwt_apache_clear_deferred (lua_State *L, int err);
 
 /**
  * Pushes deferred functions on a Lua state.
  *
  * @param L the Lua state
+ * @param err whether to push the err deferred functions
  * @return a status code
  */
-apr_status_t lwt_apache_push_deferred (lua_State *L);
+apr_status_t lwt_apache_push_deferred (lua_State *L, int err);
 
 
 /**

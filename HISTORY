@@ -16,6 +16,10 @@ allocated by Lua.
 
 - Added environment table to request value.
 
+- Added status to request value.
+
+- Added support for defererd functions.
+
 - Improved diagnostic messages in case of Lua errors.
 
 - Corrected an issue where incorrectly using else and elseif elements in a
