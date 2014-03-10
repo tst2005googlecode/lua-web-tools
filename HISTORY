@@ -22,10 +22,10 @@ allocated by Lua.
 
 - Improved diagnostic messages in case of Lua errors.
 
+- Improved Lua 5.2 support.
+
 - Corrected an issue where incorrectly using else and elseif elements in a
 template would not be detected by the compiler.
-
-- Improved Lua 5.2 support.
 
 
 * Release 0.9.1 (2012-01-06)

@@ -69,16 +69,10 @@ typedef struct lwt_conf_t {
 typedef struct lwt_stat_t {
 	struct timespec realtime;
 	struct timespec cputime;
-} lwt_stat_t;
-
-/**
- * LWT memory allocator.
- */
-typedef struct lwt_mem_t {
 	apr_pool_t *pool;
 	apr_size_t alloc;
 	apr_size_t limit;
-} lwt_mem_t;
+} lwt_stat_t;
 
 /*
  * Forward declaration of module.
@@ -367,17 +361,17 @@ static const command_rec commands[] = {
 };
 
 /*
- * Marks the current request state for statistics.
+ * Marks a request state for statistics.
  */
-static void mark_request (lwt_stat_t *mark, request_rec *r) {
-	clock_gettime(CLOCK_REALTIME, &mark->realtime);
-	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &mark->cputime);
+static void mark_request (lwt_stat_t *stat, request_rec *r) {
+	clock_gettime(CLOCK_REALTIME, &stat->realtime);
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &stat->cputime);
 }
 
 /*
  * Logs the request statistics.
  */
-static void log_request (lwt_stat_t *mark, lwt_mem_t *mem, request_rec *r) {
+static void log_request (lwt_stat_t *stat, request_rec *r) {
 	lwt_stat_t now;
 
 	mark_request(&now, r);
@@ -386,20 +380,20 @@ static void log_request (lwt_stat_t *mark, lwt_mem_t *mem, request_rec *r) {
 			"[memory=%.3f M]", r->filename,
 			(now.realtime.tv_sec +
 			((double) now.realtime.tv_nsec) / 1000000000) -
-			(mark->realtime.tv_sec +
-			((double) mark->realtime.tv_nsec) / 1000000000),
+			(stat->realtime.tv_sec +
+			((double) stat->realtime.tv_nsec) / 1000000000),
 			(now.cputime.tv_sec +
 			((double) now.cputime.tv_nsec) / 1000000000) -
-			(mark->cputime.tv_sec +
-			((double) mark->cputime.tv_nsec) / 1000000000),
-			((double) mem->alloc) / (1024 * 1024));
+			(stat->cputime.tv_sec +
+			((double) stat->cputime.tv_nsec) / 1000000000),
+			((double) stat->alloc) / (1024 * 1024));
 }
 
 /*
  * Provides the Lua allocator function implemented in terms of APR pools.
  */
 static void *lua_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
-	lwt_mem_t *mem = ud;
+	lwt_stat_t *stat = ud;
 	void *block;
 
 	if (nsize != 0) {
@@ -407,18 +401,18 @@ static void *lua_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
 			if (nsize <= osize) {
 				block = ptr;
 			} else {
-				if (mem->alloc + nsize <= mem->limit) {
-					block = apr_palloc(mem->pool, nsize);
+				if (stat->alloc + nsize <= stat->limit) {
+					block = apr_palloc(stat->pool, nsize);
 					memcpy(block, ptr, osize);
-					mem->alloc += nsize;
+					stat->alloc += nsize;
 				} else {
 					block = NULL;
 				}
 			}
 		} else {
-			if (mem->alloc + nsize <= mem->limit) {
-				block = apr_palloc(mem->pool, nsize);
-				mem->alloc += nsize;
+			if (stat->alloc + nsize <= stat->limit) {
+				block = apr_palloc(stat->pool, nsize);
+				stat->alloc += nsize;
 			} else {
 				block = NULL;
 			}
@@ -682,17 +676,16 @@ static int dowsapi (request_rec *r, lua_State *L, const char *filename) {
  * Handles LWT requests.
  */
 static int handler (request_rec *r) {
-	lwt_stat_t *mark;
+	lwt_stat_t *stat;
 	int handler, handler_wsapi;
 	lwt_conf_t *server_conf, *dir_conf, *conf;
-	lwt_mem_t *mem;
 	lua_State *L;
 	apr_status_t status;
 	int result;
 
 	/* mark for statistics */
-	mark = apr_palloc(r->pool, sizeof(lwt_stat_t));
-	mark_request(mark, r);
+	stat = apr_pcalloc(r->pool, sizeof(lwt_stat_t));
+	mark_request(stat, r);
 
 	/* are we concerned about this request? */
 	if (!r->handler) {
@@ -732,10 +725,9 @@ static int handler (request_rec *r) {
 	ap_set_content_type(r, "text/html");
 
 	/* create Lua state */
-	mem = apr_pcalloc(r->pool, sizeof(lwt_mem_t));
-	mem->pool = r->pool;
-	mem->limit = conf->memorylimit;
-	L = lua_newstate(lua_alloc, mem);
+	stat->pool = r->pool;
+	stat->limit = conf->memorylimit;
+	L = lua_newstate(lua_alloc, stat);
 	if (L == NULL) {
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
 				"Cannot create Lua state");
@@ -784,28 +776,23 @@ static int handler (request_rec *r) {
 		if (conf->prehook && ((result = dofile(r, conf, L,
 				conf->prehook)) != OK)) {
 			lwt_apache_clear_deferred(L, 0);
-			log_request(mark, mem, r);
 			return result & MOD_LWT_MASK;
 		}
 		if ((result = dofile(r, conf, L, r->filename)) != OK) {
 			lwt_apache_clear_deferred(L, 0);
-			log_request(mark, mem, r);
 			return result & MOD_LWT_MASK;
 		}
 		if (conf->posthook && ((result = dofile(r, conf, L,
 				conf->posthook)) != OK)) {
 			lwt_apache_clear_deferred(L, 0);
-			log_request(mark, mem, r);
 			return result & MOD_LWT_MASK;
 		}
-		log_request(mark, mem, r);
 		return result;
 	} else {
 		result = dowsapi(r, L, r->filename);
 		if (result != OK) {
 			lwt_apache_clear_deferred(L, 0);
 		}
-		log_request(mark, mem, r);
 		return result;
 	}
 }
@@ -894,6 +881,26 @@ static int deferred (request_rec *r) {
 }
 
 /**
+ * Logs stats.
+ */
+static int stat (request_rec *r) {
+	lua_State *L;
+	lwt_stat_t *stat;
+
+	/* Get Lua state */
+	if (apr_pool_userdata_get((void **) &L, MOD_LWT_POOL_LUASTATE, r->pool)
+			!= APR_SUCCESS || !L) {
+		return DECLINED;
+	}
+
+	/* log request */
+	lua_getallocf(L, (void **) &stat);
+	log_request(stat, r);
+
+	return OK;
+}
+	
+/**
  * Initializes the LWT module.
  */
 static void init (apr_pool_t *pool) {
@@ -901,6 +908,7 @@ static void init (apr_pool_t *pool) {
 	lwt_template_init(pool);
 	ap_hook_handler(handler, NULL, NULL, APR_HOOK_MIDDLE);
 	ap_hook_log_transaction(deferred, NULL, NULL, APR_HOOK_LAST);
+	ap_hook_log_transaction(stat, NULL, NULL, APR_HOOK_REALLY_LAST);
 }
 
 /**
