@@ -14,6 +14,8 @@ allocated by Lua.
 
 - Added the allocated Lua memory to the request statistics.
 
+- Added httpd.stat function to query request statistics.
+
 - Added environment table to request value.
 
 - Added status to request value.
