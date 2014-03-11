@@ -19,6 +19,7 @@ output = core.output
 debug = core.debug
 notice = core.notice
 err = core.err
+stat = core.stat
 
 -- Cookie weekdays and months
 local COOKIE_WEEKDAYS = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat",

@@ -361,9 +361,9 @@ static const command_rec commands[] = {
 };
 
 /*
- * Marks a request state for statistics.
+ * Sets time fields in statistics.
  */
-static void mark_request (lwt_stat_t *stat, request_rec *r) {
+static void stat_gettime (lwt_stat_t *stat) {
 	clock_gettime(CLOCK_REALTIME, &stat->realtime);
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &stat->cputime);
 }
@@ -374,7 +374,7 @@ static void mark_request (lwt_stat_t *stat, request_rec *r) {
 static void log_request (lwt_stat_t *stat, request_rec *r) {
 	lwt_stat_t now;
 
-	mark_request(&now, r);
+	stat_gettime(&now);
 	ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r, "Request statistics "
 			"[filename=%s] [realtime=%.3f s] [cputime=%.3f s] "
 			"[memory=%.3f M]", r->filename,
@@ -422,6 +422,26 @@ static void *lua_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
 	}
 
 	return block;
+}
+
+/* returns request statistics */
+static int stat_request (lua_State *L) {
+	lwt_stat_t *stat, now;
+
+	lua_getallocf(L, (void **) &stat);
+	stat_gettime(&now);
+	lua_newtable(L);
+	lua_pushnumber(L, (now.realtime.tv_sec + ((double) now.realtime.tv_nsec)
+			/ 1000000000) - (stat->realtime.tv_sec +
+			((double) stat->realtime.tv_nsec) / 1000000000));
+	lua_setfield(L, -2, "realtime");
+	lua_pushnumber(L, (now.cputime.tv_sec + ((double) now.cputime.tv_nsec)
+			/ 1000000000) - (stat->cputime.tv_sec +
+			((double) stat->cputime.tv_nsec) / 1000000000));
+	lua_setfield(L, -2, "cputime");
+	lua_pushnumber(L, stat->alloc);
+	lua_setfield(L, -2, "memory");
+	return 1;
 }
 
 /*
@@ -685,7 +705,7 @@ static int handler (request_rec *r) {
 
 	/* mark for statistics */
 	stat = apr_pcalloc(r->pool, sizeof(lwt_stat_t));
-	mark_request(stat, r);
+	stat_gettime(stat);
 
 	/* are we concerned about this request? */
 	if (!r->handler) {
@@ -746,12 +766,14 @@ static int handler (request_rec *r) {
 	luaL_openlibs(L);
 	#if LUA_VERSION_NUM >= 502
 	luaL_requiref(L, LWT_APACHE_MODULE, luaopen_apache, 0);
-	lua_pop(L, 1);
 	#else
 	lua_pushcfunction(L, luaopen_apache);
 	lua_pushstring(L, LWT_APACHE_MODULE);
-	lua_call(L, 1, 0);
+	lua_call(L, 1, 1);
 	#endif
+	lua_pushcfunction(L, stat_request);
+	lua_setfield(L, -2, "stat");
+	lua_pop(L, 1);
 
         /* apply configuration */
 	if ((status = lwt_apache_set_module_path(L, conf->path, conf->cpath, r))
@@ -883,7 +905,7 @@ static int deferred (request_rec *r) {
 /**
  * Logs stats.
  */
-static int stat (request_rec *r) {
+static int stat_log (request_rec *r) {
 	lua_State *L;
 	lwt_stat_t *stat;
 
@@ -908,7 +930,7 @@ static void init (apr_pool_t *pool) {
 	lwt_template_init(pool);
 	ap_hook_handler(handler, NULL, NULL, APR_HOOK_MIDDLE);
 	ap_hook_log_transaction(deferred, NULL, NULL, APR_HOOK_LAST);
-	ap_hook_log_transaction(stat, NULL, NULL, APR_HOOK_REALLY_LAST);
+	ap_hook_log_transaction(stat_log, NULL, NULL, APR_HOOK_REALLY_LAST);
 }
 
 /**
