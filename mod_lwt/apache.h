@@ -74,6 +74,13 @@ apr_status_t lwt_apache_clear_deferred (lua_State *L, int err);
  */
 apr_status_t lwt_apache_push_deferred (lua_State *L, int err);
 
+/**
+ * Returns whether the abort flag has been asserted.
+ *
+ * @param L the Lua state
+ * @return whether the abort flag has been asserted
+ */
+int lwt_apache_is_abort (lua_State *L);
 
 /**
  * Opens the Apache library in a Lua state.

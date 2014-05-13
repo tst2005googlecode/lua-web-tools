@@ -1,5 +1,5 @@
 APACHE2_BIN = /usr/bin
-APXS = apxs2
+APXS = apxs
 LUA_INCLUDE = /usr/include/lua5.1
 LUA_LIB = lua5.1
 LUA_INSTALL = /usr/local/share/lua/5.1
