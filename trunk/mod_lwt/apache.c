@@ -24,6 +24,7 @@
  */
 typedef struct lwt_request_rec {
 	request_rec *r;
+	int abort;
 	int in_ready;
 	int env_set;
 } lwt_request_rec;
@@ -250,11 +251,19 @@ static int local_ip_fh (lua_State *L, lwt_request_rec *lr) {
 }
 
 static int remote_ip_fh (lua_State *L, lwt_request_rec *lr) {
+#if AP_SERVER_MAJORVERSION_NUMBER >= 2 && AP_SERVER_MINORVERSION_NUMBER >= 4
+	if (lr->r->connection->client_ip != NULL) {
+		lua_pushstring(L, lr->r->connection->client_ip);
+	} else {
+		lua_pushnil(L);
+	}
+#else
 	if (lr->r->connection->remote_ip != NULL) {
 		lua_pushstring(L, lr->r->connection->remote_ip);
 	} else {
 		lua_pushnil(L);
 	}
+#endif
 	return 1;
 }
 
@@ -414,6 +423,20 @@ static int apr_table_pairs (lua_State *L) {
 }
 
 /*
+ * Sets the abort flag of an LWT request.
+ */
+static int set_abort (lua_State *L) {
+	int abort;
+	lwt_request_rec *lr;
+
+	abort = lua_toboolean(L, 1);
+	lr = get_lwt_request_rec(L);
+	lr->abort = abort;
+
+	return 0;
+}
+
+/*
  * Sets the status of a request.
  */
 static int set_status (lua_State *L) {
@@ -430,6 +453,7 @@ static int set_status (lua_State *L) {
 
 	return 0;
 }
+
 /*
  * Sets the content type.
  */
@@ -443,7 +467,6 @@ static int set_content_type (lua_State *L) {
 
 	return 0;
 }
-
 
 /*
  * Adds a header.
@@ -593,6 +616,7 @@ static int defer (lua_State *L) {
  */
 static const luaL_Reg functions[] = {
 	{ "pairs", apr_table_pairs },
+	{ "set_abort", set_abort },
 	{ "set_status", set_status },
 	{ "set_content_type", set_content_type },
 	{ "add_header", add_header },
@@ -1361,7 +1385,8 @@ static apr_status_t read_multipart (apr_table_t *args, int maxargs,
 				return status;
 			}
 			apr_pool_cleanup_register(r->pool, m->F, (apr_status_t
-				(*)(void *)) apr_file_close, NULL);
+					(*)(void *)) apr_file_close,
+					apr_pool_cleanup_null);
 		} else {
 			/* store in value buffer */
 			m->vpos = 0;
@@ -1526,6 +1551,13 @@ apr_status_t lwt_apache_push_deferred (lua_State *L, int err) {
 	lua_getfield(L, LUA_REGISTRYINDEX, err ? LWT_APACHE_ERR_DEFERRED
 			: LWT_APACHE_DEFERRED);
 	return APR_SUCCESS;
+}
+
+int lwt_apache_is_abort (lua_State *L) {
+	lwt_request_rec *lr;
+
+	lr = get_lwt_request_rec(L);
+	return lr->abort;
 }
 
 int luaopen_apache (lua_State *L) {

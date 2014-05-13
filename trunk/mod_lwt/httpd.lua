@@ -7,6 +7,7 @@ local core = require("httpd.core")
 -- Imported functions from core
 gpairs = pairs
 pairs = core.pairs
+set_abort = core.set_abort
 set_status = core.set_status
 set_content_type = core.set_content_type
 add_header = core.add_header

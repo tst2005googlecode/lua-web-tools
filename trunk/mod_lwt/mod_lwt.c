@@ -55,6 +55,7 @@ typedef struct lwt_conf_t {
 	int erroroutput;	
 	const char *path;
 	const char *cpath;
+	const char* handler;
 	const char* prehook;
 	const char* posthook;
 	int maxargs;
@@ -125,6 +126,8 @@ static void *merge_conf (apr_pool_t *p, void *base, void *add) {
 	merged_conf->path = add_conf->path ? add_conf->path : base_conf->path;
 	merged_conf->cpath = add_conf->cpath ? add_conf->cpath
 			: base_conf->cpath;
+	merged_conf->handler = add_conf->handler ? add_conf->handler 
+			: base_conf->handler;
 	merged_conf->prehook = add_conf->prehook ? add_conf->prehook 
 			: base_conf->prehook;
 	merged_conf->posthook = add_conf->posthook ? add_conf->posthook
@@ -255,6 +258,19 @@ static const char *set_luacpath (cmd_parms *cmd, void *conf, const char *arg) {
 }
 
 /*
+ * Sets the Lua handler in an LWT configuration.
+ */
+static const char *set_luahandler (cmd_parms *cmd, void *conf,
+		const char *arg) {
+	const char *value;
+	if (filepath_root(conf, &value, arg) != APR_SUCCESS) {
+		return "LuaHandler requires a file path";
+	}
+	((lwt_conf_t *) conf)->handler = value;
+	return NULL;
+}
+
+/*
  * Sets the Lua pre hook in an LWT configuration.
  */
 static const char *set_luaprehook (cmd_parms *cmd, void *conf,
@@ -345,6 +361,8 @@ static const command_rec commands[] = {
 			"a Lua module path"),
 	AP_INIT_TAKE1("LuaCPath", set_luacpath, NULL, OR_OPTIONS,
 			"a Lua module path"),
+	AP_INIT_TAKE1("LuaHandler", set_luahandler, NULL, OR_OPTIONS,
+			"a file path"),
 	AP_INIT_TAKE1("LuaPreHook", set_luaprehook, NULL, OR_OPTIONS,
 			"a file path"),
 	AP_INIT_TAKE1("LuaPostHook", set_luaposthook, NULL, OR_OPTIONS,
@@ -477,18 +495,17 @@ static const char *lua_errormsg (lua_State *L) {
 	}
 }
 
-/*
- * Loads and runs a Lua chunk.
+/**
+ * Loads a Lua chunk.
  */
-static int dofile (request_rec *r, lwt_conf_t *conf, lua_State *L,
+static int loadfile (request_rec *r, lwt_conf_t *conf, lua_State *L,
 		const char *filename) {
 	const char *errormsg;
-	int status;
 
 	/* load chunk */
 	switch (luaL_loadfile(L, filename)) {
 	case 0:
-		break;
+		return OK;
 
 	case LUA_ERRSYNTAX:
 		errormsg = lua_errormsg(L);
@@ -510,9 +527,8 @@ static int dofile (request_rec *r, lwt_conf_t *conf, lua_State *L,
 			ap_rputs("</html>\r\n", r);
 			r->status = HTTP_INTERNAL_SERVER_ERROR;
 			return OK | MOD_LWT_ERROR;
-		} else {
-			return HTTP_INTERNAL_SERVER_ERROR;
 		}
+		return HTTP_INTERNAL_SERVER_ERROR;
 
 	case LUA_ERRMEM:
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
@@ -540,11 +556,32 @@ static int dofile (request_rec *r, lwt_conf_t *conf, lua_State *L,
 				filename, lua_errormsg(L));
 		return HTTP_INTERNAL_SERVER_ERROR;
 	}
+}
+		
+/*
+ * Loads and runs a Lua chunk.
+ */
+static int dofile (request_rec *r, lwt_conf_t *conf, lua_State *L,
+		const char *filename) {
+	const char *errormsg;
+	int status;
+
+	/* push handler */
+	if (conf->handler) {
+		lua_pushvalue(L, 2);
+	}
+
+	/* load chunk */
+	if ((status = loadfile(r, conf, L, filename)) != OK) {
+		return status;
+	}
+
+	/* push request and args */
+	lua_pushvalue(L, 3);
+	lua_pushvalue(L, 4);
 
 	/* run chunk */
-	lua_pushvalue(L, 2);
-	lua_pushvalue(L, 3);
-	switch (lua_pcall(L, 2, 1, 1)) {
+	switch (lua_pcall(L, conf->handler ? 3 : 2, 1, 1)) {
 	case 0:
 		if (lua_isnil(L, -1)) {
 			/* OK */
@@ -565,7 +602,7 @@ static int dofile (request_rec *r, lwt_conf_t *conf, lua_State *L,
 			/* handler returns illegal type */
 			ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
 					"Lua handler '%s' returns illegal "
-					"%s status", filename, lua_typename(L,
+					"%s status", filename, luaL_typename(L,
 					-1));
 			return HTTP_INTERNAL_SERVER_ERROR;
 		}
@@ -786,6 +823,16 @@ static int handler (request_rec *r) {
 
 	/* handle both regular and WSAPI requests */
 	if (handler) {
+		/* push handler or nil */
+		if (conf->handler) {
+			if ((result = loadfile(r, conf, L, conf->handler))
+					!= OK) {
+				return result;
+			}
+		} else {
+			lua_pushnil(L);
+		}
+
 		/* push request record and args */
 		if (lwt_apache_push_request_rec(L, r) != APR_SUCCESS
 				|| lwt_apache_push_args(L, r, conf->maxargs,
@@ -800,9 +847,15 @@ static int handler (request_rec *r) {
 			lwt_apache_clear_deferred(L, 0);
 			return result & MOD_LWT_MASK;
 		}
+		if (lwt_apache_is_abort(L)) {
+			return OK;
+		}
 		if ((result = dofile(r, conf, L, r->filename)) != OK) {
 			lwt_apache_clear_deferred(L, 0);
 			return result & MOD_LWT_MASK;
+		}
+		if (lwt_apache_is_abort(L)) {
+			return OK;
 		}
 		if (conf->posthook && ((result = dofile(r, conf, L,
 				conf->posthook)) != OK)) {
@@ -856,7 +909,7 @@ static int deferred (request_rec *r) {
 		/* Call deferred functions */
 		for (index = 1; index <= count; index++) {
 			lua_rawgeti(L, -1, index);
-			switch (lua_pcall(L, 0, 0, 1)) {
+			switch (lua_pcall(L, 0, 1, 1)) {
 			case 0:
 				break;
 
@@ -896,6 +949,13 @@ static int deferred (request_rec *r) {
 						"in deferred function: %s",
 						lua_errormsg(L));
 			}
+			lua_pop(L, 1);
+
+			#if LUA_VERSION_NUM >= 502
+			count = lua_rawlen(L, -1);
+			#else
+			count = lua_objlen(L, -1);
+			#endif
 		}
 	}
 
