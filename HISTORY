@@ -24,6 +24,8 @@ file.
 
 - Added status to request value.
 
+- Added useragent_ip to request value (new with Apache 2.4).
+
 - Added support for defererd functions.
 
 - Added support for Apache 2.4

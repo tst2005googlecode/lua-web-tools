@@ -254,18 +254,27 @@ static int remote_ip_fh (lua_State *L, lwt_request_rec *lr) {
 #if AP_SERVER_MAJORVERSION_NUMBER >= 2 && AP_SERVER_MINORVERSION_NUMBER >= 4
 	if (lr->r->connection->client_ip != NULL) {
 		lua_pushstring(L, lr->r->connection->client_ip);
-	} else {
-		lua_pushnil(L);
-	}
 #else
 	if (lr->r->connection->remote_ip != NULL) {
 		lua_pushstring(L, lr->r->connection->remote_ip);
+#endif
 	} else {
 		lua_pushnil(L);
 	}
-#endif
 	return 1;
 }
+
+#if AP_SERVER_MAJORVERSION_NUMBER >= 2 && AP_SERVER_MINORVERSION_NUMBER >= 4
+static int useragent_ip_fh (lua_State *L, lwt_request_rec *lr) {
+	if (lr->r->useragent_ip != NULL) {
+		lua_pushstring(L, lr->r->useragent_ip);
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+#endif
+
 
 /*
  * Adds a request record field handler.
@@ -297,6 +306,9 @@ static void init_request_rec_fh (apr_pool_t *pool) {
 	add_request_rec_fh("auth_type", auth_type_fh);
 	add_request_rec_fh("local_ip", local_ip_fh);
 	add_request_rec_fh("remote_ip", remote_ip_fh);
+#if AP_SERVER_MAJORVERSION_NUMBER >= 2 && AP_SERVER_MINORVERSION_NUMBER >= 4
+	add_request_rec_fh("useragent_ip", useragent_ip_fh);
+#endif
 }
 
 /*
