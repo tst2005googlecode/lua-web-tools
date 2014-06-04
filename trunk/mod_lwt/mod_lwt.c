@@ -877,8 +877,8 @@ static int handler (request_rec *r) {
  */
 static int deferred (request_rec *r) {
 	lua_State *L;
-	size_t count;
-	int i, index;
+	size_t count, index;
+	int i;
 
 	/* Get Lua state */
 	if (apr_pool_userdata_get((void **) &L, MOD_LWT_POOL_LUASTATE, r->pool)

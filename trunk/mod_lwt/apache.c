@@ -1005,23 +1005,25 @@ typedef struct multipart_rec {
 } multipart_rec;
 
 /*
- * Reada a chunk of data from the request.
+ * Reads a chunk of data from the request.
  */
 static apr_status_t multipart_read (multipart_rec *m) {
-	m->blimit = ap_get_client_block(m->r, m->buf + m->bpos,
+	long read;
+
+	read = ap_get_client_block(m->r, m->buf + m->bpos,
 			m->bcapacity - m->bpos);
-	if (m->blimit == -1) {
+	if (read == -1) {
 		ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, m->r,
 				"Error reading request body");
 		return APR_EGENERAL;
 	}
-	m->blimit += m->bpos;
+	m->blimit = m->bpos + read;
 
 	return APR_SUCCESS;
 }
 
 /*
- * Reada a line from the request.
+ * Reads a line from the request.
  */
 static apr_status_t multipart_readline (multipart_rec *m) {
 	int cr;
