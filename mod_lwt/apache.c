@@ -623,6 +623,44 @@ static int defer (lua_State *L) {
 	return 0;
 }
 
+/**
+ * Returns a value of a date.
+ */
+static int datevalue (lua_State *L, const char *key) {
+	int value;
+
+	lua_getfield(L, -1, key);
+	if (lua_isnil(L, -1)) {
+		return luaL_error(L, "field " LUA_QS " missing", key);
+	}
+	value = lua_tonumber(L, -1);
+	lua_pop(L, 1);
+	return value;
+}
+
+/**
+ * Returns a HTTP/GMT time from components.
+ */
+static int httptime (lua_State *L) {
+	struct tm tm;
+	time_t t;
+
+	tm.tm_year = datevalue(L, "year") - 1900;
+	tm.tm_mon = datevalue(L, "month") - 1;
+	tm.tm_mday = datevalue(L, "day");
+	tm.tm_hour = datevalue(L, "hour");
+	tm.tm_min = datevalue(L, "min");
+	tm.tm_sec = datevalue(L, "sec");
+	tm.tm_isdst = -1;
+	t = timegm(&tm);
+	if (t == -1) {
+		lua_pushnil(L);
+	} else {
+		lua_pushnumber(L, t);
+	}
+	return 1;
+}
+
 /*
  * LWT functions
  */
@@ -637,6 +675,7 @@ static const luaL_Reg functions[] = {
 	{ "escape_xml", escape_xml },
 	{ "escape_js", escape_js },
 	{ "defer", defer },
+	{ "time", httptime },
 	{ NULL, NULL }
 };
 

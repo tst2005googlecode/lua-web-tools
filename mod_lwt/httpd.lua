@@ -22,20 +22,77 @@ notice = core.notice
 err = core.err
 stat = core.stat
 
--- Cookie weekdays and months
-local COOKIE_WEEKDAYS = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat",
-		"Sun" }
-local COOKIE_MONTHS = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug",
-		"Sep", "Oct", "Nov", "Dec" }
+-- HTTP date
+local WEEKDAYS = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" }
+local MONTHS = {
+	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+}
+local MONTH_NUMBERS
+local TIME = "%s+(%d%d):(%d%d):(%d%d)%s+"
+local RFC1123_DATE = "^%s*%a+,%s+(%d+)%s+(%a+)%s+(%d+)" .. TIME .. "GMT%s*$"
+local RFC850_DATE = "^%s*%a+,%s+(%d+)%-(%a+)%-(%d+)" .. TIME .. "GMT%s*$"
+local ASCTIME_DATE = "^%s*%a+%s+(%a+)%s+(%d+)" .. TIME .. "(%d+)%s*$"
 
 -- Returns a HTTP date
 function date (time)
-	if not time then return nil end
+	if time == nil then return nil end
 	local date = os.date("!*t", time)
-	return string.format("%s, %.2d-%s-%.4d %.2d:%.2d:%.2d GMT",
-			COOKIE_WEEKDAYS[date.wday], date.day,
-			COOKIE_MONTHS[date.month], date.year, date.hour,
-			date.min, date.sec)
+	return string.format("%s, %.2d %s %.4d %.2d:%.2d:%.2d GMT",
+			WEEKDAYS[date.wday], date.day, MONTHS[date.month],
+			date.year, date.hour, date.min, date.sec)
+end
+
+-- Parses an HTTP date
+function time (date)
+	if date == nil then return nil end
+
+	-- Match formats in order of preference
+	local day, month, year, hour, min, sec = string.match(date,
+			RFC1123_DATE)
+	if not day then
+		day, month, year, hour, min, sec = string.match(date,
+				RFC850_DATE)
+		if not day then
+			month, day, hour, min, sec, year = string.match(date,
+					ASCTIME_DATE)
+			if not month then
+				return nil
+			end
+		end
+	end
+
+	-- Decode
+	year = tonumber(year)
+	if year < 100 then
+		if year >= 70 then
+			year = year + 1900
+		else
+			year = year + 2000
+		end
+	end
+	if not MONTH_NUMBERS then
+		MONTH_NUMBERS = { }
+		for i, month in ipairs(MONTHS) do
+			MONTH_NUMBERS[string.lower(month)] = i
+		end
+	end
+	month = MONTH_NUMBERS[string.lower(month)]
+	if not month then
+		return nil
+	end
+	day = tonumber(day)
+	hour, min, sec = tonumber(hour), tonumber(min), tonumber(sec)
+
+	-- Convert
+	return core.time({
+		year = year,
+		month = month,
+		day = day,
+		hour = hour,
+		min = min,
+		sec = sec
+	})
 end
 
 -- Add Cookie
