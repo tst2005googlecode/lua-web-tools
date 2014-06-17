@@ -877,7 +877,7 @@ static int handler (request_rec *r) {
  */
 static int deferred (request_rec *r) {
 	lua_State *L;
-	size_t count, index;
+	size_t index;
 	int i;
 
 	/* Get Lua state */
@@ -900,14 +900,14 @@ static int deferred (request_rec *r) {
 			lua_pop(L, 1);
 			continue;
 		}
-		#if LUA_VERSION_NUM >= 502
-		count = lua_rawlen(L, -1);
-		#else
-		count = lua_objlen(L, -1);
-		#endif
 
 		/* Call deferred functions */
-		for (index = 1; index <= count; index++) {
+		#if LUA_VERSION_NUM >= 502
+		for (index = 1; index <= lua_rawlen(L, -1); index++) {
+		#else
+		for (index = 1; index <= lua_objlen(L, -1); index++) {
+		#endif
+
 			lua_rawgeti(L, -1, index);
 			switch (lua_pcall(L, 0, 1, 1)) {
 			case 0:
@@ -950,13 +950,8 @@ static int deferred (request_rec *r) {
 						lua_errormsg(L));
 			}
 			lua_pop(L, 1);
-
-			#if LUA_VERSION_NUM >= 502
-			count = lua_rawlen(L, -1);
-			#else
-			count = lua_objlen(L, -1);
-			#endif
 		}
+		lua_pop(L, 1);
 	}
 
 	return OK;
