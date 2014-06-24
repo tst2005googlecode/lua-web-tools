@@ -95,25 +95,61 @@ function time (date)
 	})
 end
 
--- Add Cookie
+-- Cookie patterns
+local COOKIE_NAME = "[^%z\001-\031\127-\255%(%)<>@,;:\\\"/%[%]%?={} \t]+"
+local COOKIE_VALUE = "[]-~!#-+--:<-[]+"
+local COOKIE_PAIR = "(" .. COOKIE_NAME .. ")=\"?(" .. COOKIE_VALUE .. ")\"?"
+
+-- Adds a cookie
 function add_cookie (name, value, expires, path, domain, secure, httponly)
+	-- Check name and value
+	if string.match(name, COOKIE_NAME) ~= name then
+		error("bad name")
+	end
+	if string.match(value, COOKIE_VALUE) ~= value then
+		error("bad value")
+	end
+
+	-- Make cookie
 	local cookie = { }
 	table.insert(cookie, string.format("%s=", name))
-	if value then table.insert(cookie, string.format("%s", value)) end
+	if value then
+		table.insert(cookie, string.format("%s", value))
+	end
 	if expires and expires >= 0 then
-		table.insert(cookie, string.format("; expires=%s",
+		table.insert(cookie, string.format("; Expires=%s",
 				date(expires)))
 	end
 	if path then
-		table.insert(cookie, string.format("; path=%s", path))
+		table.insert(cookie, string.format("; Path=%s", path))
 	end
 	if domain then
-		table.insert(cookie, string.format("; domain=%s", domain))
+		table.insert(cookie, string.format("; Domain=%s", domain))
 	end
-	if secure then table.insert(cookie, "; secure") end
-	if httponly then table.insert(cookie, "; httponly") end
+	if secure then
+		table.insert(cookie, "; Secure")
+	end
+	if httponly then
+		table.insert(cookie, "; HttpOnly")
+	end
+	cookie = table.concat(cookie)
 
-	add_header("Set-cookie", table.concat(cookie), true)
+	-- Add header
+	add_header("Set-Cookie", cookie, true)
+end
+
+-- Returns a cookie value
+function cookie (request, name)
+	for header, value in pairs(request.headers_in) do
+		if string.lower(header) == "cookie" then
+			for n, v in string.gmatch(value, COOKIE_PAIR) do
+				if n == name then
+					return v
+				end
+			end
+		end
+	end
+	return nil
 end
 		
 -- Write template

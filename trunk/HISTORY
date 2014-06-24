@@ -17,6 +17,8 @@ allocated by Lua.
 
 - Added httpd.time function to parse HTTP dates.
 
+- Added httpd.cookie function to parse HTTP cookies.
+
 - Added httpd.stat function to query request statistics.
 
 - Added httpd.set_abort function to abort request processing after the current
