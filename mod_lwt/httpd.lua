@@ -106,7 +106,7 @@ function add_cookie (name, value, expires, path, domain, secure, httponly)
 	if string.match(name, COOKIE_NAME) ~= name then
 		error("bad name")
 	end
-	if string.match(value, COOKIE_VALUE) ~= value then
+	if value and string.match(value, COOKIE_VALUE) ~= value then
 		error("bad value")
 	end
 
