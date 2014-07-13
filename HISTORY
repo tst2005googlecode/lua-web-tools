@@ -30,6 +30,8 @@ file.
 
 - Added useragent_ip to request value (new with Apache 2.4).
 
+- Added body to request value (for application/x-www-form-urlencoded).
+
 - Added support for defererd functions.
 
 - Added support for Apache 2.4
