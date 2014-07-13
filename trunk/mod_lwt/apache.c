@@ -26,6 +26,7 @@ typedef struct lwt_request_rec {
 	request_rec *r;
 	int abort;
 	int in_ready;
+	char *body;
 	int env_set;
 } lwt_request_rec;
 
@@ -143,6 +144,15 @@ static int args_fh (lua_State *L, lwt_request_rec *lr) {
 	}
 	return 1;
 }	
+
+static int body_fh (lua_State *L, lwt_request_rec *lr) {
+	if (lr->body != NULL) {
+		lua_pushstring(L, lr->body);
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
 
 static int method_fh (lua_State *L, lwt_request_rec *lr) {
 	if (lr->r->method != NULL) {
@@ -294,6 +304,7 @@ static void init_request_rec_fh (apr_pool_t *pool) {
 	add_request_rec_fh("path", path_fh);
 	add_request_rec_fh("path_info", path_info_fh);
 	add_request_rec_fh("args", args_fh);
+	add_request_rec_fh("body", body_fh);
 	add_request_rec_fh("method", method_fh);
 	add_request_rec_fh("status", status_fh);
 	add_request_rec_fh("env", env_fh);
@@ -1544,6 +1555,7 @@ apr_status_t lwt_apache_push_args (lua_State *L, request_rec *r, int maxargs,
 	char *urlencoded_args;
 	apr_status_t status;
 	const char *content_type, *content_type_noparam;
+	lwt_request_rec *lr;
 
 	/* extract args */
 	args = apr_table_make(r->pool, 4);
@@ -1570,7 +1582,9 @@ apr_status_t lwt_apache_push_args (lua_State *L, request_rec *r, int maxargs,
 					argslimit, r)) != APR_SUCCESS) {
 				return status;
 			}
-			get_lwt_request_rec(L)->in_ready = 1;
+			lr = get_lwt_request_rec(L);
+			lr->in_ready = 1;
+			lr->body = apr_pstrdup(r->pool, urlencoded_args);
 			if ((status = decode_urlencoded(args, urlencoded_args,
 					maxargs, r)) != APR_SUCCESS) {
 				return status;
